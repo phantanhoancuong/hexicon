@@ -1,0 +1,52 @@
+import { HexCoord, Player } from "@/types/HexCell";
+
+export const PLAYERS = [1, 2] as const;
+
+export const COLUMN_HEIGHTS = [6, 7, 6, 7, 6, 7, 6];
+
+const LETTER_COUNTS: Record<string, number> = {
+  A: 9,
+  B: 2,
+  C: 2,
+  D: 4,
+  E: 12,
+  F: 2,
+  G: 3,
+  H: 2,
+  I: 9,
+  J: 1,
+  K: 1,
+  L: 4,
+  M: 2,
+  N: 6,
+  O: 8,
+  P: 2,
+  Q: 1,
+  R: 6,
+  S: 4,
+  T: 6,
+  U: 4,
+  V: 2,
+  W: 2,
+  X: 1,
+  Y: 2,
+  Z: 1,
+};
+
+export const LETTER_POOL = Object.entries(LETTER_COUNTS)
+  .map(([letter, count]) => letter.repeat(count))
+  .join("");
+
+export const CAPITAL_COORDS: Record<Player, HexCoord> = {
+  1: { q: 1, r: 0 },
+  2: { q: 5, r: 2 },
+};
+
+export const NEIGHBOR_OFFSETS: readonly HexCoord[] = [
+  { q: 1, r: 0 },
+  { q: 1, r: -1 },
+  { q: 0, r: -1 },
+  { q: -1, r: 0 },
+  { q: -1, r: 1 },
+  { q: 0, r: 1 },
+];
