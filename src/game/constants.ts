@@ -1,9 +1,26 @@
-import { HexCoord, Player } from "@/types/HexCell";
+import { HexCoord, Player } from "@/types/HexTile";
 
 export const PLAYERS = [1, 2] as const;
 
+/** Number of tiles in each column, from left to right. */
 export const COLUMN_HEIGHTS = [6, 7, 6, 7, 6, 7, 6];
 
+export const CAPITAL_COORDS: Record<Player, HexCoord> = {
+  1: { q: 1, r: 0 },
+  2: { q: 5, r: 2 },
+};
+
+/** The six direction offsets to a tile's neighbors. */
+export const NEIGHBOR_OFFSETS: readonly HexCoord[] = [
+  { q: 1, r: 0 },
+  { q: 1, r: -1 },
+  { q: 0, r: -1 },
+  { q: -1, r: 0 },
+  { q: -1, r: 1 },
+  { q: 0, r: 1 },
+];
+
+/** English Scrabble tile counts, used as simple letter frequencies. */
 const LETTER_COUNTS: Record<string, number> = {
   A: 9,
   B: 2,
@@ -36,17 +53,3 @@ const LETTER_COUNTS: Record<string, number> = {
 export const LETTER_POOL = Object.entries(LETTER_COUNTS)
   .map(([letter, count]) => letter.repeat(count))
   .join("");
-
-export const CAPITAL_COORDS: Record<Player, HexCoord> = {
-  1: { q: 1, r: 0 },
-  2: { q: 5, r: 2 },
-};
-
-export const NEIGHBOR_OFFSETS: readonly HexCoord[] = [
-  { q: 1, r: 0 },
-  { q: 1, r: -1 },
-  { q: 0, r: -1 },
-  { q: -1, r: 0 },
-  { q: -1, r: 1 },
-  { q: 0, r: 1 },
-];

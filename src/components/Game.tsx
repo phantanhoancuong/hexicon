@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-import Board from "@/components/Board";
 import GameOverDialog from "@/components/GameOverDialog";
+import HexGrid from "@/components/HexGrid";
 import Scoreboard from "@/components/Scoreboard";
 
 import { PLAYERS } from "@/game/constants";
@@ -11,7 +11,7 @@ import {
   getCapturableKeys,
   getGameResult,
   getNeutralizedKeys,
-  initHexBoard,
+  initHexGrid,
   isSelectable,
   nextPlayer,
   randomizeNeutral,
@@ -19,9 +19,9 @@ import {
   resolveSubmit,
 } from "@/game/game";
 
-import { coordToKey, getCell, keyToCoord } from "@/game/hex";
+import { coordToKey, getTile, keyToCoord } from "@/game/hex";
 import { useWordValidator } from "@/hooks/useWordValidator";
-import { HexCellData, HexCoord, Player } from "@/types/HexCell";
+import { HexCoord, HexTileData, Player } from "@/types/HexTile";
 
 const STATUS_MESSAGE = {
   loading: "Loading word list...",
@@ -29,8 +29,9 @@ const STATUS_MESSAGE = {
   error: "Could not load the word list. Refresh to try again.",
 } as const;
 
+/** Game state handler. */
 export default function Game() {
-  const [board, setBoard] = useState<HexCellData[][]>(initHexBoard);
+  const [grid, setGrid] = useState<HexTileData[][]>(initHexGrid);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(
     () => new Set(),
   );
@@ -42,28 +43,28 @@ export default function Game() {
   );
   const { status, isValidWord } = useWordValidator();
 
-  const result = getGameResult(board);
-  const capturableKeys = getCapturableKeys(board, selectedKeys, currentPlayer);
-  const word = [...selectedKeys]
-    .map((key) => getCell(board, keyToCoord(key))?.character ?? "")
-    .join("");
-
-  const canSubmit = !result.over && isValidWord(word);
+  const result = getGameResult(grid);
+  const capturableKeys = getCapturableKeys(grid, selectedKeys, currentPlayer);
   const neutralizedKeys = getNeutralizedKeys(
-    board,
+    grid,
     capturableKeys,
     currentPlayer,
   );
+  const word = [...selectedKeys]
+    .map((key) => getTile(grid, keyToCoord(key))?.character ?? "")
+    .join("");
+  const canSubmit = !result.over && isValidWord(word);
 
+  // Letters are random, so they are assigned after mount.
   useEffect(() => {
-    setBoard((prev) => randomizeNeutral(prev));
+    setGrid((prev) => randomizeNeutral(prev));
   }, []);
 
-  const handleSelect = (coord: HexCoord) => {
+  const handleSelect = (coord: HexCoord): void => {
     if (result.over) return;
 
-    const cell = getCell(board, coord);
-    if (!cell || !isSelectable(cell)) return;
+    const tile = getTile(grid, coord);
+    if (!tile || !isSelectable(tile)) return;
 
     const key = coordToKey(coord);
     setSelectedKeys((prev) => {
@@ -78,12 +79,12 @@ export default function Game() {
     if (!canSubmit) return;
 
     const {
-      board: newBoard,
+      grid: newGrid,
       extraTurn,
       lostCapitalPlayers,
-    } = resolveSubmit(board, selectedKeys, capturableKeys, currentPlayer);
+    } = resolveSubmit(grid, selectedKeys, capturableKeys, currentPlayer);
 
-    const newResult = getGameResult(newBoard);
+    const newResult = getGameResult(newGrid);
     if (newResult.over) {
       const winner = newResult.winner;
       setWins((w) => ({ ...w, [winner]: w[winner] + 1 }));
@@ -91,21 +92,23 @@ export default function Game() {
 
     const nextToMove = extraTurn ? currentPlayer : nextPlayer(currentPlayer);
 
+    // A player who lost their capital gets a new one at the start of their turn.
     const pending = new Set([...pendingCapitals, ...lostCapitalPlayers]);
-    const finalBoard = pending.delete(nextToMove)
-      ? reformCapital(newBoard, nextToMove)
-      : newBoard;
+    const finalGrid = pending.delete(nextToMove)
+      ? reformCapital(newGrid, nextToMove)
+      : newGrid;
 
     setPendingCapitals(pending);
-    setBoard(finalBoard);
+    setGrid(finalGrid);
     setSelectedKeys(new Set());
     setTurn((t) => t + 1);
     setCurrentPlayer(nextToMove);
   };
 
   const resetGame = (): void => {
-    setBoard(randomizeNeutral(initHexBoard()));
+    setGrid(randomizeNeutral(initHexGrid()));
     setSelectedKeys(new Set());
+    setPendingCapitals(new Set());
     setTurn(1);
     setCurrentPlayer(PLAYERS[0]);
   };
@@ -119,8 +122,8 @@ export default function Game() {
         word={word}
       />
 
-      <Board
-        board={board}
+      <HexGrid
+        grid={grid}
         selectedKeys={selectedKeys}
         capturableKeys={capturableKeys}
         currentPlayer={currentPlayer}

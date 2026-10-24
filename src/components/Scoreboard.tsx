@@ -1,8 +1,6 @@
 import { PLAYERS } from "@/game/constants";
 
-import { PLAYER_TAG_CLASS } from "@/types/HexCell";
-
-import { Player } from "@/types/HexCell";
+import { PLAYER_TAG_CLASS, Player } from "@/types/HexTile";
 
 type ScoreboardProps = {
   wins: Record<Player, number>;
@@ -11,6 +9,7 @@ type ScoreboardProps = {
   word: string;
 };
 
+/** Shows each player's tag and win count, the turn number and the current word. */
 export default function Scoreboard({
   wins,
   currentPlayer,

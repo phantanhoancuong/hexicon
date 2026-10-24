@@ -8,9 +8,9 @@ type DictionaryState =
   | { status: "error" };
 
 /**
- * Load the word list and expose a word check.
+ * Loads the word list once and provides a word check.
  *
- * @returns `status` of the load, and `isValidWord` (returns `false` until the list is ready).
+ * @returns `status` of the load, and `isValidWord`, which returns `false` until the list is ready.
  */
 export const useWordValidator = (): {
   status: DictionaryState["status"];
@@ -33,7 +33,7 @@ export const useWordValidator = (): {
       }
     };
 
-    load();
+    void load();
 
     return () => {
       cancelled = true;

@@ -1,12 +1,12 @@
-import { HexCellData, HexCoord, Player } from "@/types/HexCell";
+import { HexCoord, HexTileData, Player } from "@/types/HexTile";
 
 import {
   coordToKey,
-  getCell,
   getNeighbors,
+  getTile,
   hexDistance,
   keyToCoord,
-  setCell,
+  setTile,
 } from "@/game/hex";
 
 import {
@@ -16,25 +16,98 @@ import {
   PLAYERS,
 } from "@/game/constants";
 
-type SubmitResult = {
-  board: HexCellData[][];
+export type SubmitResult = {
+  grid: HexTileData[][];
   extraTurn: boolean;
   lostCapitalPlayers: Set<Player>;
 };
 
+export type GameResult = { over: false } | { over: true; winner: Player };
+
 /**
- * Find which selected cells would be captured.
+ * Picks a random letter on a weighted frequency scale.
  *
- * Selected cells form islands (connected through neighbors). An island is considered capturable if one of its cells touches `player`'s territory.
- * All cells within a capturable island become capturable regardless of whether they touch `player`'s territory directly.
+ * @returns A single uppercase letter.
+ */
+export const pickRandomLetter = (): string =>
+  LETTER_POOL[Math.floor(Math.random() * LETTER_POOL.length)];
+
+/**
+ * Assigns every neutral tile a new random letter.
  *
- * @param board - Current board state.
- * @param selectedKeys - Keys of the cells the player picked.
+ * @param grid - Current hex grid state.
+ * @returns A new grid. Tiles that are not `neutral` are unmodified.
+ */
+export const randomizeNeutral = (grid: HexTileData[][]): HexTileData[][] =>
+  grid.map((column) =>
+    column.map((tile) =>
+      tile.status === "neutral"
+        ? { ...tile, character: pickRandomLetter() }
+        : tile,
+    ),
+  );
+
+/**
+ * Finds whose turn follows a player's.
+ *
+ *
+ * @param player - The player who just moved.
+ * @returns The next player in turn order.
+ */
+export const nextPlayer = (player: Player): Player =>
+  PLAYERS[(PLAYERS.indexOf(player) + 1) % PLAYERS.length];
+
+/**
+ * Whether a tile can be part of a selection. Only `neutral` tiles can be selected.
+ *
+ * @param tile - The tile to check.
+ * @returns `true` if the tile can be selected.
+ */
+export const isSelectable = (tile: HexTileData): boolean =>
+  tile.status === "neutral";
+
+/**
+ * Creates the starting grid: every tile is unintialized except each player's capital as well as the capital's neighbors (`neutral`).
+ *
+ * @returns A starting grid (no assigned letters).
+ */
+export const initHexGrid = (): HexTileData[][] => {
+  const grid = COLUMN_HEIGHTS.map((height, column) =>
+    Array.from({ length: height }, (_, i): HexTileData => ({
+      coord: { q: column, r: i - Math.ceil(column / 2) },
+      character: "",
+      status: "uninitialized",
+      isCapital: false,
+    })),
+  );
+
+  const placeCapital = (coord: HexCoord, player: Player) => {
+    setTile(grid, coord, { isCapital: true, status: player });
+    for (const neighbor of getNeighbors(grid, coord)) {
+      if (getTile(grid, neighbor)!.status === "uninitialized")
+        setTile(grid, neighbor, { status: "neutral" });
+    }
+  };
+
+  for (const player of PLAYERS) placeCapital(CAPITAL_COORDS[player], player);
+
+  return grid;
+};
+
+/**
+ * Finds which selected tiles would be captured.
+ *
+ * Selected tiles form islands (connected through neighbors). An island is considered capturable if one of its tiles touches `player`'s territory.
+ *
+ * All tiles within a capturable island become capturable regardless of whether they touch `player`'s territory directly.
+ *
+ * @param grid - Current hex grid state.
+ * @param selectedKeys - Keys of the tiles the player picked.
  * @param player - The player making the move.
- * @return Keys of the selected cells belonging to a capturable island.
+ * @return Keys of the selected tiles belonging to a capturable island.
  */
 export const getCapturableKeys = (
-  board: HexCellData[][],
+  grid: HexTileData[][],
   selectedKeys: Set<string>,
   player: Player,
 ): Set<string> => {
@@ -46,64 +119,86 @@ export const getCapturableKeys = (
 
     const stack: string[] = [selectedKey];
     const island: string[] = [];
-    let touchesPlayer: boolean = false;
+    let touchesPlayer = false;
+    visitedKeys.add(selectedKey);
 
     while (stack.length > 0) {
       const currentKey = stack.pop()!;
       island.push(currentKey);
 
-      const currentCoord = keyToCoord(currentKey);
-      for (const neighborCoord of getNeighbors(board, currentCoord)) {
-        if (!touchesPlayer && getCell(board, neighborCoord)!.status === player)
-          touchesPlayer = true;
-        const neighborKey = coordToKey(neighborCoord);
+      for (const neighbor of getNeighbors(grid, keyToCoord(currentKey))) {
+        if (getTile(grid, neighbor)!.status === player) touchesPlayer = true;
 
-        if (visitedKeys.has(neighborKey) || !selectedKeys.has(neighborKey))
+        const neighborKey = coordToKey(neighbor);
+        if (visitedKeys.has(neighborKey) || !selectedKeys.has(neighborKey)) {
           continue;
+        }
 
         visitedKeys.add(neighborKey);
         stack.push(neighborKey);
       }
     }
 
-    if (touchesPlayer) island.forEach((item) => capturableKeys.add(item));
+    if (touchesPlayer) island.forEach((key) => capturableKeys.add(key));
   }
 
   return capturableKeys;
 };
+/**
+ * Finds the tiles that a capture would turn neutral: Tiles next to a captured tile that belong to another player or are `unintialized`.
+ *
+ * @param grid - Current hex grid state.
+ * @param capturableKeys - Keys of the tiles being captured.
+ * @param player - The player making the move.
+ * @returns Keys of the tiles that would become `neutral`.
+ */
+export const getNeutralizedKeys = (
+  grid: HexTileData[][],
+  capturableKeys: Set<string>,
+  player: Player,
+): Set<string> => {
+  const keys = new Set<string>();
 
-export const pickRandomLetter = (): string =>
-  LETTER_POOL[Math.floor(Math.random() * LETTER_POOL.length)];
+  for (const capturableKey of capturableKeys) {
+    for (const neighbor of getNeighbors(grid, keyToCoord(capturableKey))) {
+      const neighborKey = coordToKey(neighbor);
+      if (capturableKeys.has(neighborKey)) continue;
+
+      const { status } = getTile(grid, neighbor)!;
+      if (status !== player && status !== "neutral") keys.add(neighborKey);
+    }
+  }
+
+  return keys;
+};
 
 /**
- * Apply a submitted move to a copy of the board and return the copy.
+ * Applies a submitted move to a copy of the grid.
  *
- * Captured cells go to `player`.
- * Opponent and uninitialized cells next to a captured cell become neutral.
- * Selected cells not capturable get a new letter.
+ * Captured tiles go to `player`. Enemy and uninitialized tiles next to a captured tile become `neutral` with a new letter assigned. Selected tile but are not capturable also get a new letter assigned.
  *
- * @param board - Current board state.
- * @param selectedKeys - Keys of the cells the player picked.
- * @param capturableKeys - Subset of `selectedKeys` are connected to `player`'s territory.
+ * @param grid - Current hex grid state.
+ * @param selectedKeys - Keys of the tiles the player picked.
+ * @param capturableKeys - Subset of `selectedKeys` connected to the `player`'s territory.
  * @param player - The player making the move.
- * @returns The new board, and if the move gets an extra turn.
+ * @returns The new grid, if the move earns an extra turn (a capital was captured) and which players lost a capital.
  */
 export const resolveSubmit = (
-  board: HexCellData[][],
+  grid: HexTileData[][],
   selectedKeys: Set<string>,
   capturableKeys: Set<string>,
   player: Player,
 ): SubmitResult => {
-  const newBoard = board.map((column) => [...column]);
+  const newGrid = grid.map((column) => [...column]);
   const lostCapitalPlayers = new Set<Player>();
 
-  for (const key of getNeutralizedKeys(board, capturableKeys, player)) {
+  for (const key of getNeutralizedKeys(grid, capturableKeys, player)) {
     const coord = keyToCoord(key);
-    const cell = getCell(board, coord)!;
-    if (cell.isCapital && typeof cell.status === "number") {
-      lostCapitalPlayers.add(cell.status);
+    const tile = getTile(grid, coord)!;
+    if (tile.isCapital && typeof tile.status === "number") {
+      lostCapitalPlayers.add(tile.status);
     }
-    setCell(newBoard, coord, {
+    setTile(newGrid, coord, {
       status: "neutral",
       character: pickRandomLetter(),
       isCapital: false,
@@ -111,89 +206,55 @@ export const resolveSubmit = (
   }
 
   for (const key of capturableKeys) {
-    setCell(newBoard, keyToCoord(key), { status: player, character: "" });
+    setTile(newGrid, keyToCoord(key), { status: player, character: "" });
   }
 
   for (const key of selectedKeys) {
     if (capturableKeys.has(key)) continue;
-    setCell(newBoard, keyToCoord(key), { character: pickRandomLetter() });
+    setTile(newGrid, keyToCoord(key), { character: pickRandomLetter() });
   }
 
   return {
-    board: newBoard,
+    grid: newGrid,
     extraTurn: lostCapitalPlayers.size > 0,
     lostCapitalPlayers,
   };
 };
 
-export const isSelectable = (cell: HexCellData): boolean =>
-  cell.status === "neutral";
-
-export const initHexBoard = (): HexCellData[][] => {
-  const board = COLUMN_HEIGHTS.map((height, column) =>
-    Array.from({ length: height }, (_, i): HexCellData => ({
-      coord: { q: column, r: i - Math.ceil(column / 2) },
-      character: "",
-      status: "uninitialized",
-      isCapital: false,
-    })),
-  );
-
-  const placeCapital = (coord: HexCoord, player: Player) => {
-    setCell(board, coord, { isCapital: true, status: player });
-    for (const neighbor of getNeighbors(board, coord)) {
-      if (getCell(board, neighbor)!.status === "uninitialized")
-        setCell(board, neighbor, { status: "neutral" });
-    }
-  };
-
-  for (const player of PLAYERS) placeCapital(CAPITAL_COORDS[player], player);
-
-  return board;
-};
-
-const ownsAnyCell = (board: HexCellData[][], player: Player): boolean =>
-  board.some((column) => column.some((cell) => cell.status === player));
-
-export type GameResult = { over: false } | { over: true; winner: Player };
-
-export const getGameResult = (board: HexCellData[][]): GameResult => {
-  const alive = PLAYERS.filter((player) => ownsAnyCell(board, player));
-  return alive.length > 1 ? { over: false } : { over: true, winner: alive[0] };
-};
-
-export const randomizeNeutral = (board: HexCellData[][]): HexCellData[][] =>
-  board.map((column) =>
-    column.map((cell) =>
-      cell.status === "neutral"
-        ? { ...cell, character: pickRandomLetter() }
-        : cell,
-    ),
-  );
-
-export const nextPlayer = (player: Player): Player =>
-  PLAYERS[(PLAYERS.indexOf(player) + 1) % PLAYERS.length];
-
-const minDistance = (from: HexCoord, targets: HexCellData[]): number =>
+/** Smallest distasnce from `from` to any of the target tiles (`Infinity` if none). */
+const minDistance = (from: HexCoord, targets: HexTileData[]): number =>
   targets.reduce(
     (min, target) => Math.min(min, hexDistance(from, target.coord)),
     Infinity,
   );
 
+/**
+ * Picks the safest tile for a player's new capital/
+ *
+ * A capital is lost when a tile next to it is captured.
+ *
+ * So a simple heuristics is used: The tile deepest inside the `player`'s territory, farthest from any tile that they don't own is probably the safest one.
+ *
+ * Ties go to the tile farthest from enemy tiles, then go to the first tile found.
+ *
+ * @param grid - Current hex grid state.
+ * @param player - The player who needs a capital.
+ * @returns The chosen coordinate, or `null` if the player lost all of their tiles.
+ */
 export const findCapitalSite = (
-  board: HexCellData[][],
+  grid: HexTileData[][],
   player: Player,
 ): HexCoord | null => {
-  const owned: HexCellData[] = [];
-  const notOwned: HexCellData[] = [];
-  const enemies: HexCellData[] = [];
+  const owned: HexTileData[] = [];
+  const notOwned: HexTileData[] = [];
+  const enemies: HexTileData[] = [];
 
-  for (const column of board) {
-    for (const cell of column) {
-      if (cell.status === player) owned.push(cell);
+  for (const column of grid) {
+    for (const tile of column) {
+      if (tile.status === player) owned.push(tile);
       else {
-        notOwned.push(cell);
-        if (typeof cell.status === "number") enemies.push(cell);
+        notOwned.push(tile);
+        if (typeof tile.status === "number") enemies.push(tile);
       }
     }
   }
@@ -202,15 +263,15 @@ export const findCapitalSite = (
   let bestDepth = -Infinity;
   let bestEnemyDistance = -Infinity;
 
-  for (const cell of owned) {
-    const depth = minDistance(cell.coord, notOwned);
-    const enemyDistance = minDistance(cell.coord, enemies);
+  for (const tile of owned) {
+    const depth = minDistance(tile.coord, notOwned);
+    const enemyDistance = minDistance(tile.coord, enemies);
 
     if (
       depth > bestDepth ||
       (depth === bestDepth && enemyDistance > bestEnemyDistance)
     ) {
-      best = cell.coord;
+      best = tile.coord;
       bestDepth = depth;
       bestEnemyDistance = enemyDistance;
     }
@@ -219,34 +280,35 @@ export const findCapitalSite = (
   return best;
 };
 
+/**
+ * Gives a player a new capital on their safest tile.{@link findCapitalSite}
+ *
+ * @param grid - Current hex grid state.
+ * @param player - The player who lost their capital.
+ * @returns A copy of the grid with a new capital set, or the same grid if `player` lost all their tiles.
+ */
 export const reformCapital = (
-  board: HexCellData[][],
+  grid: HexTileData[][],
   player: Player,
-): HexCellData[][] => {
-  const site = findCapitalSite(board, player);
-  if (site === null) return board;
+): HexTileData[][] => {
+  const site = findCapitalSite(grid, player);
+  if (site === null) return grid;
 
-  const newBoard = board.map((column) => [...column]);
-  setCell(newBoard, site, { isCapital: true });
-  return newBoard;
+  const newGrid = grid.map((column) => [...column]);
+  setTile(newGrid, site, { isCapital: true });
+  return newGrid;
 };
 
-export const getNeutralizedKeys = (
-  board: HexCellData[][],
-  capturableKeys: Set<string>,
-  player: Player,
-): Set<string> => {
-  const keys = new Set<string>();
+const ownsAnyTile = (grid: HexTileData[][], player: Player): boolean =>
+  grid.some((column) => column.some((tile) => tile.status === player));
 
-  for (const capturableKey of capturableKeys) {
-    for (const neighbor of getNeighbors(board, keyToCoord(capturableKey))) {
-      const neighborKey = coordToKey(neighbor);
-      if (capturableKeys.has(neighborKey)) continue;
-
-      const { status } = getCell(board, neighbor)!;
-      if (status !== player && status !== "neutral") keys.add(neighborKey);
-    }
-  }
-
-  return keys;
+/**
+ * Decides whether a game is over. It ends when at most one player owns a tile.
+ *
+ * @param grid - Current hex grid state.
+ * @returns `{ over: false} `, or `{ over: true, winner} `.
+ */
+export const getGameResult = (grid: HexTileData[][]): GameResult => {
+  const alive = PLAYERS.filter((player) => ownsAnyTile(grid, player));
+  return alive.length > 1 ? { over: false } : { over: true, winner: alive[0] };
 };
