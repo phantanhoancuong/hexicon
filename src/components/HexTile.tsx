@@ -8,9 +8,11 @@ import { crown } from "@/icons";
 
 import { HexCoord, HexTileData } from "@/types/HexTile";
 
-export const HEX_WIDTH = 48;
+const HEX_WIDTH = "var(--hex-w)";
 
-const HEX_HEIGHT = (Math.sqrt(3) / 2) * HEX_WIDTH;
+const HEX_HEIGHT_RATIO = Math.sqrt(3) / 2;
+
+const HEX_HEIGHT = `calc(var(--hex-w) * ${HEX_HEIGHT_RATIO})`;
 
 const HEX_CLIP =
   "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)";
@@ -38,7 +40,12 @@ export default function HexTile({ tile, colorClass, onSelect }: HexTileProps) {
   return (
     <button
       className={`${colorClass} ${tile.status === "neutral" ? `cursor-pointer` : ``} flex items-center justify-center transition select-none`}
-      style={{ width: HEX_WIDTH, height: HEX_HEIGHT, clipPath: HEX_CLIP }}
+      style={{
+        width: HEX_WIDTH,
+        height: HEX_HEIGHT,
+        clipPath: HEX_CLIP,
+        fontSize: "calc(var(--hex-w) * 0.4)",
+      }}
       onClick={() => onSelect(tile.coord)}
       aria-label={tile.isCapital ? `Player ${tile.status} capital` : undefined}
     >

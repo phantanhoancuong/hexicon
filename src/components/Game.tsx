@@ -114,7 +114,7 @@ export default function Game() {
   };
 
   return (
-    <div className="flex w-full max-w-3xl flex-col items-center gap-4">
+    <div className="flex h-full w-full max-w-3xl flex-col items-center gap-4">
       <Scoreboard
         wins={wins}
         currentPlayer={currentPlayer}
@@ -131,10 +131,12 @@ export default function Game() {
         onSelect={handleSelect}
       />
 
-      <p className="h-6 text-sm">{STATUS_MESSAGE[status]}</p>
+      <p className="h-6 font-sans text-sm text-muted-foreground">
+        {STATUS_MESSAGE[status]}
+      </p>
 
       <button
-        className={`h-10 w-full bg-red-500 disabled:opacity-40 ${canSubmit ? `cursor-pointer` : `cursor-auto`}`}
+        className={`h-10 w-full rounded-md bg-accent font-semibold tracking-wide text-accent-foreground disabled:opacity-40 ${canSubmit ? `cursor-pointer` : `cursor-auto`}`}
         onClick={handleSubmit}
         disabled={!canSubmit}
       >

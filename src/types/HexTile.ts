@@ -18,8 +18,8 @@ export type HexTileData = {
 
 /** Tile colors by owner or state. */
 export const STATUS_CLASS: Record<TileStatus, string> = {
-  uninitialized: "bg-zinc-800/50 text-transparent",
-  neutral: "bg-stone-100 text-stone-900",
+  uninitialized: "bg-tile-uninitialized text-transparent",
+  neutral: "bg-tile-neutral text-tile-neutral-foreground",
   1: "bg-sky-600 text-white",
   2: "bg-rose-600 text-white",
 };
