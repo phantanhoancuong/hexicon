@@ -1,4 +1,4 @@
-import HexTile, { HEX_WIDTH } from "@/components/HexTile";
+import HexTile from "@/components/HexTile";
 
 import { coordToKey } from "@/game/hex";
 
@@ -15,7 +15,7 @@ import {
 } from "@/types/HexTile";
 
 /** Horizontal overlap between neighboring columns, so flat-top hexes interlock. */
-const HEX_OVERLAP = HEX_WIDTH / 4;
+const HEX_OVERLAP = "calc(var(--hex-w) / -4)";
 
 type HexGridProps = {
   grid: HexTileData[][];
@@ -60,32 +60,34 @@ export default function HexGrid({
   onSelect,
 }: HexGridProps) {
   return (
-    <div className="flex flex-row items-center gap-0.5">
-      {grid.map((column, columnIndex) => (
-        <div
-          className="flex flex-col gap-0.5"
-          key={columnIndex}
-          style={{ marginLeft: columnIndex > 0 ? -HEX_OVERLAP : 0 }}
-        >
-          {column.map((tile) => {
-            const key = coordToKey(tile.coord);
-            const highlight = getHighlight(key, selectedKeys, capturableKeys);
-            return (
-              <HexTile
-                key={key}
-                tile={tile}
-                colorClass={getColorClass(
-                  tile.status,
-                  highlight,
-                  currentPlayer,
-                  neutralizedKeys.has(key),
-                )}
-                onSelect={onSelect}
-              />
-            );
-          })}
-        </div>
-      ))}
+    <div className="@container-size flex min-h-0 w-full flex-1 items-center justify-center">
+      <div className="flex flex-row items-center justify-center gap-0.5 hex-vars">
+        {grid.map((column, columnIndex) => (
+          <div
+            className="flex flex-col gap-0.5"
+            key={columnIndex}
+            style={{ marginLeft: columnIndex > 0 ? HEX_OVERLAP : 0 }}
+          >
+            {column.map((tile) => {
+              const key = coordToKey(tile.coord);
+              const highlight = getHighlight(key, selectedKeys, capturableKeys);
+              return (
+                <HexTile
+                  key={key}
+                  tile={tile}
+                  colorClass={getColorClass(
+                    tile.status,
+                    highlight,
+                    currentPlayer,
+                    neutralizedKeys.has(key),
+                  )}
+                  onSelect={onSelect}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

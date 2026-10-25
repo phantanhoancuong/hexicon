@@ -24,23 +24,23 @@ export default function Scoreboard({
           return (
             <div
               key={player}
-              className={`flex flex-col items-center px-3 ${
+              className={`flex flex-col items-center rounded-md px-3 font-semibold tracking-wide transition-colors ${
                 player === currentPlayer
                   ? PLAYER_TAG_CLASS[player]
-                  : "bg-transparent text-stone-500"
+                  : "bg-transparent text-muted-foreground"
               }`}
             >
               <span>{`PLAYER ${player}`}</span>
-              <span className="text-sm">{`${count} ${count === 1 ? "win" : "wins"}`}</span>
+              <span className="text-sm font-normal">{`${count} ${count === 1 ? "win" : "wins"}`}</span>
             </div>
           );
         })}
       </div>
-      <div className="flex h-8 w-full items-center justify-center truncate text-xl">
+      <div className="flex h-8 w-full items-center justify-center text-xl text-muted-foreground">
         {`Turn ${turn}`}
       </div>
-      <div className="flex h-8 w-full items-center justify-center truncate text-xl">
-        {word}
+      <div className="flex h-8 w-full items-center justify-center font-mono text-xl font-semibold tracking-widest">
+        <span className="truncate">{word}</span>
       </div>
     </div>
   );
