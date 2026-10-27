@@ -60,7 +60,7 @@ export default function HexGrid({
   onSelect,
 }: HexGridProps) {
   return (
-    <div className="@container-size flex min-h-0 w-full flex-1 items-center justify-center">
+    <div className="@container-size flex aspect-[5.5/6.06] min-h-0 w-full shrink items-center justify-center">
       <div className="flex flex-row items-center justify-center gap-0.5 hex-vars">
         {grid.map((column, columnIndex) => (
           <div
