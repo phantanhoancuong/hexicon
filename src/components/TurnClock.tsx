@@ -1,19 +1,18 @@
-const RADIUS = 20;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+import DrainingRing, { RADIUS } from "@/components/DrainingRing";
 
 type TurnClockProps = {
   durationSeconds: number;
+  delayMs: number;
   secondsLeft: number | null;
   resetKey: number;
 };
 
 export default function TurnClock({
   durationSeconds,
+  delayMs,
   secondsLeft,
   resetKey,
 }: TurnClockProps) {
-  const fraction =
-    secondsLeft === null ? 1 : Math.max(0, secondsLeft - 1) / durationSeconds;
   const isLow = secondsLeft !== null && secondsLeft / durationSeconds < 0.1;
 
   return (
@@ -34,18 +33,12 @@ export default function TurnClock({
           strokeWidth="4"
           className="stroke-border"
         />
-        <circle
+        <DrainingRing
           key={resetKey}
-          cx="24"
-          cy="24"
-          r={RADIUS}
-          fill="none"
-          strokeWidth="4"
-          strokeDasharray={CIRCUMFERENCE}
-          strokeDashoffset={CIRCUMFERENCE * (1 - fraction)}
-          className={`transition-[stroke-dashoffset] duration-1000 ease-linear ${
-            isLow ? "stroke-foreground" : "stroke-muted-foreground"
-          }`}
+          durationSeconds={durationSeconds}
+          delayMs={delayMs}
+          running={secondsLeft !== null}
+          isLow={isLow}
         />
       </svg>
       <span
