@@ -7,6 +7,11 @@ type UseCountdownOptions = {
   onExpire: () => void;
 };
 
+type Deadline = {
+  at: number;
+  key: number;
+};
+
 export const useCountdown = ({
   running,
   durationSeconds,
@@ -14,7 +19,7 @@ export const useCountdown = ({
   onExpire,
 }: UseCountdownOptions): number | null => {
   const [now, setNow] = useState<number>(0);
-  const [deadline, setDeadline] = useState<number | null>(null);
+  const [deadline, setDeadline] = useState<Deadline | null>(null);
 
   const onExpireRef = useRef(onExpire);
 
@@ -31,7 +36,7 @@ export const useCountdown = ({
     const startTime = Date.now();
     const nextDeadline = startTime + durationSeconds * 1000;
     setNow(startTime);
-    setDeadline(nextDeadline);
+    setDeadline({ at: nextDeadline, key: resetKey });
   }, [resetKey, running, durationSeconds]);
 
   useEffect(() => {
@@ -43,7 +48,7 @@ export const useCountdown = ({
 
     const expiry = setTimeout(
       () => onExpireRef.current(),
-      Math.max(0, deadline - Date.now()),
+      Math.max(0, deadline.at - Date.now()),
     );
 
     return () => {
@@ -52,7 +57,6 @@ export const useCountdown = ({
     };
   }, [deadline]);
 
-  return deadline === null
-    ? null
-    : Math.max(0, Math.ceil((deadline! - now) / 1000));
+  if (deadline === null || deadline.key !== resetKey) return null;
+  return Math.max(0, Math.ceil((deadline.at - now) / 1000));
 };

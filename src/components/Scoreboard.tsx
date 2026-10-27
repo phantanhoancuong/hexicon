@@ -1,6 +1,7 @@
 import PlayerTag from "@/components/PlayerTag";
-import TurnClock from "./TurnClock";
+import TurnClock from "@/components/TurnClock";
 
+import { TURN_SECONDS } from "@/game/constants";
 import { Player } from "@/types/HexTile";
 
 type ScoreboardProps = {
@@ -21,7 +22,11 @@ export default function Scoreboard({
     <div className="flex w-full flex-col gap-1">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <PlayerTag player={1} wins={wins[1]} isActive={currentPlayer === 1} />
-        <TurnClock secondsLeft={secondsLeft} />
+        <TurnClock
+          durationSeconds={TURN_SECONDS}
+          secondsLeft={secondsLeft}
+          resetKey={turn}
+        />
         <PlayerTag player={2} wins={wins[2]} isActive={currentPlayer === 2} />
       </div>
       <div className="flex h-5 items-center justify-center text-sm text-muted-foreground">
