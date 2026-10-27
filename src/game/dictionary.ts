@@ -44,21 +44,14 @@ const fits = (word: string, counts: number[]): boolean => {
 };
 
 /**
- * Builds a dictionary from a list of words. Words are trimmed and blank entries are skipped.
+ * Builds a dictionary from a cleaned word list produced by the built script. Entries shorter than the minimum length, such as a trailing blank line, are skipped.
  *
  * @param words - The word list.
  * @returns A dictionary that can look up words, check that `letters` can spell a word, and deal letters.
  */
 export const createDictionary = (words: string[]): Dictionary => {
-  const set = new Set<string>();
-  for (const word of words) {
-    const normalized = normalize(word);
-    if (normalized) set.add(normalized);
-  }
-
-  const playable = [...set].filter(
-    (word) => word.length >= MIN_WORD_LENGTH && /^[A-Z]+$/.test(word),
-  );
+  const playable = words.filter((word) => word.length >= MIN_WORD_LENGTH);
+  const set = new Set(playable);
 
   const buckets: string[][] = Array.from(
     { length: PLANT_MAX_LENGTH + 1 },
@@ -106,7 +99,8 @@ export const createDictionary = (words: string[]): Dictionary => {
  */
 export const loadDictionary = async (): Promise<Dictionary> => {
   const response = await fetch(WORDS_URL);
-  if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+  if (!response.ok) throw new Error(`Could not load words: ${response.status}`);
+
   const text = await response.text();
   return createDictionary(text.split("\n"));
 };
