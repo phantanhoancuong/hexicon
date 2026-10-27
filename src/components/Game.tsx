@@ -1,13 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import GameOverDialog from "@/components/GameOverDialog";
 import HexGrid from "@/components/HexGrid";
 import Scoreboard from "@/components/Scoreboard";
 import WordDisplay from "@/components/WordDisplay";
 
-import { PLAYERS, TURN_SECONDS } from "@/game/constants";
+import {
+  NOTICE_MS,
+  PLAYERS,
+  TURN_PAUSE_MS,
+  TURN_SECONDS,
+} from "@/game/constants";
+
+import { Dictionary } from "@/game/dictionary";
+import { describeEvents } from "@/game/events";
 import {
   dealNeutral,
   ensurePlayable,
@@ -25,13 +33,13 @@ import { coordToKey, getTile, keyToCoord } from "@/game/hex";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useWordValidator } from "@/hooks/useWordValidator";
 
-import { Dictionary } from "@/game/dictionary";
+import { GameEvent } from "@/types/GameEvent";
 import { HexCoord, HexTileData, Player } from "@/types/HexTile";
 
 const STATUS_MESSAGE = {
   loading: "Loading word list...",
   ready: "",
-  error: "Could not load the word list. Refresh to try again.",
+  error: "Could not load words. Refresh to retry.",
 } as const;
 
 /** Game state handler. */
@@ -48,6 +56,7 @@ export default function Game() {
   );
   const [passStarter, setPassStarter] = useState<Player | null>(null);
   const [dealtFor, setDealtFor] = useState<Dictionary | null>(null);
+  const [events, setEvents] = useState<GameEvent[]>([]);
   const { status, dictionary, isValidWord } = useWordValidator();
 
   const result = getGameResult(grid);
@@ -68,6 +77,13 @@ export default function Game() {
     setDealtFor(dictionary);
     setGrid(dealNeutral(grid, dictionary));
   }
+
+  useEffect(() => {
+    if (events.length === 0) return;
+
+    const timeout = setTimeout(() => setEvents([]), NOTICE_MS);
+    return () => clearTimeout(timeout);
+  }, [events]);
 
   const handleSelect = (coord: HexCoord): void => {
     if (result.over) return;
@@ -103,12 +119,27 @@ export default function Game() {
 
     // A player who lost their capital gets a new one at the start of their turn.
     const pending = new Set([...pendingCapitals, ...lostCapitalPlayers]);
-    const finalGrid = pending.delete(nextToMove)
-      ? reformCapital(newGrid, nextToMove)
-      : newGrid;
+    const reformed = pending.delete(nextToMove);
+    const finalGrid = reformed ? reformCapital(newGrid, nextToMove) : newGrid;
+    const playableGrid = ensurePlayable(finalGrid, dictionary);
+
+    const nextEvents: GameEvent[] = [...lostCapitalPlayers].map(
+      (loser): GameEvent => ({
+        type: "capital-captured",
+        captor: currentPlayer,
+        loser,
+      }),
+    );
+    if (reformed) {
+      nextEvents.push({ type: "capital-reformed", player: nextToMove });
+    }
+    if (playableGrid !== finalGrid) {
+      nextEvents.push({ type: "redeal", reason: "no-playable-word" });
+    }
 
     setPendingCapitals(pending);
-    setGrid(ensurePlayable(finalGrid, dictionary));
+    setGrid(playableGrid);
+    setEvents(newResult.over ? [] : nextEvents);
     setPassStarter(null);
     setSelectedKeys(new Set());
     setTurn((t) => t + 1);
@@ -120,16 +151,24 @@ export default function Game() {
 
     const nextToMove = nextPlayer(currentPlayer);
     const pending = new Set(pendingCapitals);
-    const reformedGrid = pending.delete(nextToMove)
-      ? reformCapital(grid, nextToMove)
-      : grid;
+    const reformed = pending.delete(nextToMove);
+    const reformedGrid = reformed ? reformCapital(grid, nextToMove) : grid;
 
     const starter = passStarter ?? currentPlayer;
-    const reshuffle = nextToMove === starter;
+    const redeal = nextToMove === starter;
+
+    const nextEvents: GameEvent[] = [
+      { type: "timeout", player: currentPlayer },
+    ];
+    if (reformed) {
+      nextEvents.push({ type: "capital-reformed", player: nextToMove });
+    }
+    if (redeal) nextEvents.push({ type: "redeal", reason: "all-passed" });
 
     setPendingCapitals(pending);
-    setGrid(reshuffle ? dealNeutral(reformedGrid, dictionary) : reformedGrid);
-    setPassStarter(reshuffle ? null : starter);
+    setGrid(redeal ? dealNeutral(reformedGrid, dictionary) : reformedGrid);
+    setEvents(nextEvents);
+    setPassStarter(redeal ? null : starter);
     setSelectedKeys(new Set());
     setTurn((t) => t + 1);
     setCurrentPlayer(nextToMove);
@@ -138,6 +177,7 @@ export default function Game() {
   const secondsLeft = useCountdown({
     running: status === "ready" && !result.over,
     durationSeconds: TURN_SECONDS,
+    startDelayMs: TURN_PAUSE_MS,
     resetKey: turn,
     onExpire: handlePass,
   });
@@ -146,12 +186,17 @@ export default function Game() {
     if (!dictionary) return;
 
     setGrid(dealNeutral(initHexGrid(), dictionary));
+    setEvents([]);
     setPassStarter(null);
     setSelectedKeys(new Set());
     setPendingCapitals(new Set());
     setTurn(1);
     setCurrentPlayer(PLAYERS[0]);
   };
+
+  const statusMessage = STATUS_MESSAGE[status];
+  const notice = describeEvents(events);
+  const message = statusMessage || notice;
 
   return (
     <div className="flex h-full w-full max-w-xl flex-col items-center justify-center gap-(--gap) [--gap:clamp(0.5rem,1.5dvh,1rem)]">
@@ -162,6 +207,26 @@ export default function Game() {
         secondsLeft={secondsLeft}
       />
 
+      <div className="relative flex h-8 w-full shrink-0 items-center justify-center">
+        {message && (
+          <span
+            key={message}
+            aria-hidden
+            className={
+              statusMessage
+                ? "px-2 text-center font-sans text-base leading-6 font-medium text-foreground"
+                : "animate-[notice-pop_0.3s_ease-out] rounded-full bg-foreground px-4 py-1 text-center font-sans text-base leading-6 font-semibold text-background motion-reduce:animate-none"
+            }
+          >
+            {message}
+          </span>
+        )}
+
+        <p role="status" className="sr-only">
+          {message}
+        </p>
+      </div>
+
       <HexGrid
         grid={grid}
         selectedKeys={selectedKeys}
@@ -171,14 +236,8 @@ export default function Game() {
         onSelect={handleSelect}
       />
 
-      <div className="relative w-full shrink-0">
+      <div className="w-full shrink-0">
         <WordDisplay word={word} isValid={wordIsValid} />
-
-        {STATUS_MESSAGE[status] && (
-          <p className="absolute inset-0 flex items-center justify-center bg-background font-sans text-sm text-muted-foreground">
-            {STATUS_MESSAGE[status]}
-          </p>
-        )}
       </div>
 
       <button
