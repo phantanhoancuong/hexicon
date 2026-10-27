@@ -7,7 +7,12 @@ import HexGrid from "@/components/HexGrid";
 import Scoreboard from "@/components/Scoreboard";
 import WordDisplay from "@/components/WordDisplay";
 
-import { NOTICE_MS, PLAYERS, TURN_SECONDS } from "@/game/constants";
+import {
+  NOTICE_MS,
+  PLAYERS,
+  TURN_PAUSE_MS,
+  TURN_SECONDS,
+} from "@/game/constants";
 
 import { Dictionary } from "@/game/dictionary";
 import { describeEvents } from "@/game/events";
@@ -172,6 +177,7 @@ export default function Game() {
   const secondsLeft = useCountdown({
     running: status === "ready" && !result.over,
     durationSeconds: TURN_SECONDS,
+    startDelayMs: TURN_PAUSE_MS,
     resetKey: turn,
     onExpire: handlePass,
   });

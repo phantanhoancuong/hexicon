@@ -5,6 +5,7 @@ const DISPLAY_INTERVAL_MS = 250;
 type UseCountdownOptions = {
   running: boolean;
   durationSeconds: number;
+  startDelayMs: number;
   resetKey: number;
   onExpire: () => void;
 };
@@ -14,9 +15,18 @@ type Tick = {
   secondsLeft: number;
 };
 
+/**
+ * Counts down from a duration and calls `onExpire` at zero.
+ *
+ * The full duration is shown for `startDelayMs` before the countdown begins.
+ *
+ * @param  options - The countdown settings.
+ * @returns Whole seconds left, or `null` when the countdown is not active.
+ */
 export const useCountdown = ({
   running,
   durationSeconds,
+  startDelayMs,
   resetKey,
   onExpire,
 }: UseCountdownOptions): number | null => {
@@ -30,13 +40,11 @@ export const useCountdown = ({
   useEffect(() => {
     if (!running) return;
 
-    const deadline = Date.now() + durationSeconds * 1000;
+    const deadline = Date.now() + startDelayMs + durationSeconds * 1000;
 
     const update = () => {
-      const secondsLeft = Math.max(
-        0,
-        Math.ceil((deadline - Date.now()) / 1000),
-      );
+      const remaining = Math.ceil((deadline - Date.now()) / 1000);
+      const secondsLeft = Math.min(durationSeconds, Math.max(0, remaining));
 
       setTick((prev) =>
         prev?.key === resetKey && prev.secondsLeft === secondsLeft
@@ -57,7 +65,7 @@ export const useCountdown = ({
       clearInterval(display);
       clearTimeout(expiry);
     };
-  }, [resetKey, running, durationSeconds]);
+  }, [resetKey, running, durationSeconds, startDelayMs]);
 
   if (!running || tick === null || tick.key !== resetKey) return null;
   return tick.secondsLeft;
