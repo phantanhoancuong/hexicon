@@ -1,5 +1,6 @@
 import { HexCoord, HexTileData, Player } from "@/types/HexTile";
 
+import { Dictionary } from "@/game/dictionary";
 import {
   coordToKey,
   getNeighbors,
@@ -8,13 +9,9 @@ import {
   keyToCoord,
   setTile,
 } from "@/game/hex";
+import { pickRandomLetter } from "@/game/letters";
 
-import {
-  CAPITAL_COORDS,
-  COLUMN_HEIGHTS,
-  LETTER_POOL,
-  PLAYERS,
-} from "@/game/constants";
+import { CAPITAL_COORDS, COLUMN_HEIGHTS, PLAYERS } from "@/game/constants";
 
 export type SubmitResult = {
   grid: HexTileData[][];
@@ -23,29 +20,6 @@ export type SubmitResult = {
 };
 
 export type GameResult = { over: false } | { over: true; winner: Player };
-
-/**
- * Picks a random letter on a weighted frequency scale.
- *
- * @returns A single uppercase letter.
- */
-export const pickRandomLetter = (): string =>
-  LETTER_POOL[Math.floor(Math.random() * LETTER_POOL.length)];
-
-/**
- * Assigns every neutral tile a new random letter.
- *
- * @param grid - Current hex grid state.
- * @returns A new grid. Tiles that are not `neutral` are unmodified.
- */
-export const randomizeNeutral = (grid: HexTileData[][]): HexTileData[][] =>
-  grid.map((column) =>
-    column.map((tile) =>
-      tile.status === "neutral"
-        ? { ...tile, character: pickRandomLetter() }
-        : tile,
-    ),
-  );
 
 /**
  * Finds whose turn follows a player's.
@@ -67,7 +41,64 @@ export const isSelectable = (tile: HexTileData): boolean =>
   tile.status === "neutral";
 
 /**
- * Creates the starting grid: every tile is unintialized except each player's capital as well as the capital's neighbors (`neutral`).
+ * Assigns every neutral tile a new random letter. Guarantees at least a valid word can be formed.
+ *
+ * @param grid - Current hex grid state.
+ * @param dictionary - Used to plant a word in the dealt letters.
+ * @returns A new grid. Tiles that are not `neutral` are unmodified.
+ */
+export const dealNeutral = (
+  grid: HexTileData[][],
+  dictionary: Dictionary,
+): HexTileData[][] => {
+  const count = grid.reduce(
+    (total, column) => total + column.filter(isSelectable).length,
+    0,
+  );
+  const letters = dictionary.dealLetters(count);
+
+  let next = 0;
+  return grid.map((column) =>
+    column.map((tile) =>
+      isSelectable(tile) ? { ...tile, character: letters[next++] } : tile,
+    ),
+  );
+};
+
+/**
+ * Whether the selectable tiles can spell at least one word.
+ *
+ * @param grid - Current hex grid state.
+ * @param dictionary - The dictionary to check against.
+ * @returns `true` if some word can be spelt from the neutral tiles.
+ */
+export const hasPlayableWord = (
+  grid: HexTileData[][],
+  dictionary: Dictionary,
+): boolean =>
+  dictionary.canSpellFrom(
+    grid
+      .flat()
+      .filter(isSelectable)
+      .map((tile) => tile.character)
+      .join(""),
+  );
+
+/**
+ * Makes sure a word can be spelt, dealing new letters otherwise.
+ *
+ * @param grid - Current hex grid state.
+ * @param dictionary - The dictionary to check against.
+ * @returns The same grid if it is playable, otherwise a grid with new neutral letters.
+ */
+export const ensurePlayable = (
+  grid: HexTileData[][],
+  dictionary: Dictionary,
+): HexTileData[][] =>
+  hasPlayableWord(grid, dictionary) ? grid : dealNeutral(grid, dictionary);
+
+/**
+ * Creates the starting grid: every tile is uninitialized except each player's capital as well as the capital's neighbors (`neutral`).
  *
  * @returns A starting grid (no assigned letters).
  */
@@ -145,7 +176,7 @@ export const getCapturableKeys = (
   return capturableKeys;
 };
 /**
- * Finds the tiles that a capture would turn neutral: Tiles next to a captured tile that belong to another player or are `unintialized`.
+ * Finds the tiles that a capture would turn neutral: Tiles next to a captured tile that belong to another player or are `uninitialized`.
  *
  * @param grid - Current hex grid state.
  * @param capturableKeys - Keys of the tiles being captured.
@@ -221,7 +252,7 @@ export const resolveSubmit = (
   };
 };
 
-/** Smallest distasnce from `from` to any of the target tiles (`Infinity` if none). */
+/** Smallest distance from `from` to any of the target tiles (`Infinity` if none). */
 const minDistance = (from: HexCoord, targets: HexTileData[]): number =>
   targets.reduce(
     (min, target) => Math.min(min, hexDistance(from, target.coord)),
@@ -229,7 +260,7 @@ const minDistance = (from: HexCoord, targets: HexTileData[]): number =>
   );
 
 /**
- * Picks the safest tile for a player's new capital/
+ * Picks the safest tile for a player's new capital.
  *
  * A capital is lost when a tile next to it is captured.
  *

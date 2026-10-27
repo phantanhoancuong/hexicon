@@ -14,6 +14,7 @@ type DictionaryState =
  */
 export const useWordValidator = (): {
   status: DictionaryState["status"];
+  dictionary: Dictionary | null;
   isValidWord: (word: string) => boolean;
 } => {
   const [dictionaryState, setDictionaryState] = useState<DictionaryState>({
@@ -40,8 +41,11 @@ export const useWordValidator = (): {
     };
   }, []);
 
+  const dictionary =
+    dictionaryState.status === "ready" ? dictionaryState.dictionary : null;
+
   const isValidWord = (word: string): boolean =>
     dictionaryState.status === "ready" && dictionaryState.dictionary.has(word);
 
-  return { status: dictionaryState.status, isValidWord };
+  return { status: dictionaryState.status, dictionary, isValidWord };
 };

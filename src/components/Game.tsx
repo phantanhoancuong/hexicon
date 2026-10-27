@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import GameOverDialog from "@/components/GameOverDialog";
 import HexGrid from "@/components/HexGrid";
@@ -9,13 +9,14 @@ import WordDisplay from "@/components/WordDisplay";
 
 import { PLAYERS, TURN_SECONDS } from "@/game/constants";
 import {
+  dealNeutral,
+  ensurePlayable,
   getCapturableKeys,
   getGameResult,
   getNeutralizedKeys,
   initHexGrid,
   isSelectable,
   nextPlayer,
-  randomizeNeutral,
   reformCapital,
   resolveSubmit,
 } from "@/game/game";
@@ -24,6 +25,7 @@ import { coordToKey, getTile, keyToCoord } from "@/game/hex";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useWordValidator } from "@/hooks/useWordValidator";
 
+import { Dictionary } from "@/game/dictionary";
 import { HexCoord, HexTileData, Player } from "@/types/HexTile";
 
 const STATUS_MESSAGE = {
@@ -44,7 +46,9 @@ export default function Game() {
   const [pendingCapitals, setPendingCapitals] = useState<Set<Player>>(
     () => new Set(),
   );
-  const { status, isValidWord } = useWordValidator();
+  const [passStarter, setPassStarter] = useState<Player | null>(null);
+  const [dealtFor, setDealtFor] = useState<Dictionary | null>(null);
+  const { status, dictionary, isValidWord } = useWordValidator();
 
   const result = getGameResult(grid);
   const capturableKeys = getCapturableKeys(grid, selectedKeys, currentPlayer);
@@ -59,10 +63,11 @@ export default function Game() {
   const wordIsValid = isValidWord(word);
   const canSubmit = !result.over && wordIsValid;
 
-  // Letters are random, so they are assigned after mount.
-  useEffect(() => {
-    setGrid((prev) => randomizeNeutral(prev));
-  }, []);
+  // Letters are dealt once the word list is ready.
+  if (dictionary && dealtFor !== dictionary) {
+    setDealtFor(dictionary);
+    setGrid(dealNeutral(grid, dictionary));
+  }
 
   const handleSelect = (coord: HexCoord): void => {
     if (result.over) return;
@@ -80,7 +85,7 @@ export default function Game() {
   };
 
   const handleSubmit = (): void => {
-    if (!canSubmit) return;
+    if (!canSubmit || !dictionary) return;
 
     const {
       grid: newGrid,
@@ -103,23 +108,28 @@ export default function Game() {
       : newGrid;
 
     setPendingCapitals(pending);
-    setGrid(finalGrid);
+    setGrid(ensurePlayable(finalGrid, dictionary));
+    setPassStarter(null);
     setSelectedKeys(new Set());
     setTurn((t) => t + 1);
     setCurrentPlayer(nextToMove);
   };
 
   const handlePass = (): void => {
-    if (result.over) return;
+    if (result.over || !dictionary) return;
 
     const nextToMove = nextPlayer(currentPlayer);
     const pending = new Set(pendingCapitals);
-    const nextGrid = pending.delete(nextToMove)
+    const reformedGrid = pending.delete(nextToMove)
       ? reformCapital(grid, nextToMove)
       : grid;
 
+    const starter = passStarter ?? currentPlayer;
+    const reshuffle = nextToMove === starter;
+
     setPendingCapitals(pending);
-    setGrid(nextGrid);
+    setGrid(reshuffle ? dealNeutral(reformedGrid, dictionary) : reformedGrid);
+    setPassStarter(reshuffle ? null : starter);
     setSelectedKeys(new Set());
     setTurn((t) => t + 1);
     setCurrentPlayer(nextToMove);
@@ -133,7 +143,10 @@ export default function Game() {
   });
 
   const resetGame = (): void => {
-    setGrid(randomizeNeutral(initHexGrid()));
+    if (!dictionary) return;
+
+    setGrid(dealNeutral(initHexGrid(), dictionary));
+    setPassStarter(null);
     setSelectedKeys(new Set());
     setPendingCapitals(new Set());
     setTurn(1);

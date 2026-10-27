@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dictionary": "node scripts/build-dictionary.mjs",
+    "dev": "npm run dictionary && next dev",
+    "build": "npm run dictionary && next build",
     "start": "next start",
     "lint": "eslint"
   },

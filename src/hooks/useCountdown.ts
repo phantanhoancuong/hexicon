@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+const DISPLAY_INTERVAL_MS = 250;
+
 type UseCountdownOptions = {
   running: boolean;
   durationSeconds: number;
@@ -7,9 +9,9 @@ type UseCountdownOptions = {
   onExpire: () => void;
 };
 
-type Deadline = {
-  at: number;
+type Tick = {
   key: number;
+  secondsLeft: number;
 };
 
 export const useCountdown = ({
@@ -18,9 +20,7 @@ export const useCountdown = ({
   resetKey,
   onExpire,
 }: UseCountdownOptions): number | null => {
-  const [now, setNow] = useState<number>(0);
-  const [deadline, setDeadline] = useState<Deadline | null>(null);
-
+  const [tick, setTick] = useState<Tick | null>(null);
   const onExpireRef = useRef(onExpire);
 
   useEffect(() => {
@@ -28,35 +28,37 @@ export const useCountdown = ({
   });
 
   useEffect(() => {
-    if (!running) {
-      setDeadline(null);
-      return;
-    }
+    if (!running) return;
 
-    const startTime = Date.now();
-    const nextDeadline = startTime + durationSeconds * 1000;
-    setNow(startTime);
-    setDeadline({ at: nextDeadline, key: resetKey });
-  }, [resetKey, running, durationSeconds]);
+    const deadline = Date.now() + durationSeconds * 1000;
 
-  useEffect(() => {
-    if (deadline === null) return;
+    const update = () => {
+      const secondsLeft = Math.max(
+        0,
+        Math.ceil((deadline - Date.now()) / 1000),
+      );
 
-    const update = setInterval(() => {
-      setNow(Date.now());
-    }, 250);
+      setTick((prev) =>
+        prev?.key === resetKey && prev.secondsLeft === secondsLeft
+          ? prev
+          : { key: resetKey, secondsLeft },
+      );
+    };
 
+    const first = setTimeout(update, 0);
+    const display = setInterval(update, DISPLAY_INTERVAL_MS);
     const expiry = setTimeout(
       () => onExpireRef.current(),
-      Math.max(0, deadline.at - Date.now()),
+      Math.max(0, deadline - Date.now()),
     );
 
     return () => {
-      clearInterval(update);
+      clearTimeout(first);
+      clearInterval(display);
       clearTimeout(expiry);
     };
-  }, [deadline]);
+  }, [resetKey, running, durationSeconds]);
 
-  if (deadline === null || deadline.key !== resetKey) return null;
-  return Math.max(0, Math.ceil((deadline.at - now) / 1000));
+  if (!running || tick === null || tick.key !== resetKey) return null;
+  return tick.secondsLeft;
 };
