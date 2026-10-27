@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import GameOverDialog from "@/components/GameOverDialog";
 import HexGrid from "@/components/HexGrid";
@@ -25,6 +25,7 @@ import { coordToKey, getTile, keyToCoord } from "@/game/hex";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useWordValidator } from "@/hooks/useWordValidator";
 
+import { Dictionary } from "@/game/dictionary";
 import { HexCoord, HexTileData, Player } from "@/types/HexTile";
 
 const STATUS_MESSAGE = {
@@ -46,6 +47,7 @@ export default function Game() {
     () => new Set(),
   );
   const [passStarter, setPassStarter] = useState<Player | null>(null);
+  const [dealtFor, setDealtFor] = useState<Dictionary | null>(null);
   const { status, dictionary, isValidWord } = useWordValidator();
 
   const result = getGameResult(grid);
@@ -61,10 +63,11 @@ export default function Game() {
   const wordIsValid = isValidWord(word);
   const canSubmit = !result.over && wordIsValid;
 
-  // Letters are random, so they are assigned after mount.
-  useEffect(() => {
-    if (dictionary) setGrid((prev) => dealNeutral(prev, dictionary));
-  }, [dictionary]);
+  // Letters are dealt once the word list is ready.
+  if (dictionary && dealtFor !== dictionary) {
+    setDealtFor(dictionary);
+    setGrid(dealNeutral(grid, dictionary));
+  }
 
   const handleSelect = (coord: HexCoord): void => {
     if (result.over) return;
