@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import GameOverDialog from "@/components/GameOverDialog";
 import HexGrid from "@/components/HexGrid";
 import Scoreboard from "@/components/Scoreboard";
+import WordDisplay from "@/components/WordDisplay";
 
-import { PLAYERS } from "@/game/constants";
+import { PLAYERS, TURN_SECONDS } from "@/game/constants";
 import {
   getCapturableKeys,
   getGameResult,
@@ -18,9 +19,11 @@ import {
   reformCapital,
   resolveSubmit,
 } from "@/game/game";
-
 import { coordToKey, getTile, keyToCoord } from "@/game/hex";
+
+import { useCountdown } from "@/hooks/useCountdown";
 import { useWordValidator } from "@/hooks/useWordValidator";
+
 import { HexCoord, HexTileData, Player } from "@/types/HexTile";
 
 const STATUS_MESSAGE = {
@@ -53,7 +56,8 @@ export default function Game() {
   const word = [...selectedKeys]
     .map((key) => getTile(grid, keyToCoord(key))?.character ?? "")
     .join("");
-  const canSubmit = !result.over && isValidWord(word);
+  const wordIsValid = isValidWord(word);
+  const canSubmit = !result.over && wordIsValid;
 
   // Letters are random, so they are assigned after mount.
   useEffect(() => {
@@ -105,6 +109,29 @@ export default function Game() {
     setCurrentPlayer(nextToMove);
   };
 
+  const handlePass = (): void => {
+    if (result.over) return;
+
+    const nextToMove = nextPlayer(currentPlayer);
+    const pending = new Set(pendingCapitals);
+    const nextGrid = pending.delete(nextToMove)
+      ? reformCapital(grid, nextToMove)
+      : grid;
+
+    setPendingCapitals(pending);
+    setGrid(nextGrid);
+    setSelectedKeys(new Set());
+    setTurn((t) => t + 1);
+    setCurrentPlayer(nextToMove);
+  };
+
+  const secondsLeft = useCountdown({
+    running: status === "ready" && !result.over,
+    durationSeconds: TURN_SECONDS,
+    resetKey: turn,
+    onExpire: handlePass,
+  });
+
   const resetGame = (): void => {
     setGrid(randomizeNeutral(initHexGrid()));
     setSelectedKeys(new Set());
@@ -114,12 +141,12 @@ export default function Game() {
   };
 
   return (
-    <div className="flex h-full w-full max-w-3xl flex-col items-center gap-4">
+    <div className="flex h-full w-full max-w-xl flex-col items-center justify-center gap-(--gap) [--gap:clamp(0.5rem,1.5dvh,1rem)]">
       <Scoreboard
         wins={wins}
         currentPlayer={currentPlayer}
         turn={turn}
-        word={word}
+        secondsLeft={secondsLeft}
       />
 
       <HexGrid
@@ -131,12 +158,18 @@ export default function Game() {
         onSelect={handleSelect}
       />
 
-      <p className="h-6 font-sans text-sm text-muted-foreground">
-        {STATUS_MESSAGE[status]}
-      </p>
+      <div className="relative w-full shrink-0">
+        <WordDisplay word={word} isValid={wordIsValid} />
+
+        {STATUS_MESSAGE[status] && (
+          <p className="absolute inset-0 flex items-center justify-center bg-background font-sans text-sm text-muted-foreground">
+            {STATUS_MESSAGE[status]}
+          </p>
+        )}
+      </div>
 
       <button
-        className={`h-10 w-full rounded-md bg-accent font-semibold tracking-wide text-accent-foreground disabled:opacity-40 ${canSubmit ? `cursor-pointer` : `cursor-auto`}`}
+        className={`h-10 w-full shrink-0 rounded-md bg-accent font-semibold tracking-wide text-accent-foreground disabled:opacity-40 ${canSubmit ? "cursor-pointer" : "cursor-auto"}`}
         onClick={handleSubmit}
         disabled={!canSubmit}
       >

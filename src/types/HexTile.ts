@@ -41,6 +41,11 @@ export const THREATENED_CLASS: Record<Player, string> = {
 
 /** Player labels in `Scoreboard`. */
 export const PLAYER_TAG_CLASS: Record<Player, string> = {
-  1: "bg-sky-600 text-white",
-  2: "bg-rose-600 text-white",
+  1: "border-sky-600 bg-sky-600 text-white",
+  2: "border-rose-600 bg-rose-600 text-white",
+};
+
+export const PLAYER_TAG_IDLE_CLASS: Record<Player, string> = {
+  1: "border-sky-600 bg-transparent text-sky-600",
+  2: "border-rose-600 bg-transparent text-rose-600",
 };

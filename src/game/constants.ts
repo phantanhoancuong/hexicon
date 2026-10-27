@@ -53,3 +53,5 @@ const LETTER_COUNTS: Record<string, number> = {
 export const LETTER_POOL = Object.entries(LETTER_COUNTS)
   .map(([letter, count]) => letter.repeat(count))
   .join("");
+
+export const TURN_SECONDS = 60;
