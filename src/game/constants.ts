@@ -54,4 +54,6 @@ export const LETTER_POOL = Object.entries(LETTER_COUNTS)
   .map(([letter, count]) => letter.repeat(count))
   .join("");
 
-export const TURN_SECONDS = 60;
+export const TURN_SECONDS = 5;
+
+export const NOTICE_MS = 4000;
