@@ -1,7 +1,7 @@
 import PlayerTag from "@/components/PlayerTag";
 import TurnClock from "@/components/TurnClock";
 
-import { TURN_SECONDS } from "@/game/constants";
+import { TURN_PAUSE_MS, TURN_SECONDS } from "@/game/constants";
 import { Player } from "@/types/HexTile";
 
 type ScoreboardProps = {
@@ -24,6 +24,7 @@ export default function Scoreboard({
         <PlayerTag player={1} wins={wins[1]} isActive={currentPlayer === 1} />
         <TurnClock
           durationSeconds={TURN_SECONDS}
+          delayMs={TURN_PAUSE_MS}
           secondsLeft={secondsLeft}
           resetKey={turn}
         />
