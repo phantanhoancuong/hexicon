@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dictionary": "node scripts/build-dictionary.mjs",
+    "dictionary": "node scripts/build-dictionary.mjs && node scripts/build-common.mjs",
+    "dictionary:trim": "node scripts/trim-frequencies.mjs",
     "dev": "npm run dictionary && next dev",
     "build": "npm run dictionary && next build",
     "start": "next start",

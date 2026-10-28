@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 const root = process.cwd();
-const SOURCE = resolve(root, "data/dictionary/re-enable.txt");
+const SOURCE = resolve(root, "data/dictionary/re-enable/re-enable.txt");
 const OUTPUT_FILE = resolve(root, "public/dictionary/dictionary.txt");
 const OUTPUT_FOLDER = dirname(OUTPUT_FILE);
 

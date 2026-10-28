@@ -1,23 +1,50 @@
 import { pickRandomLetter, shuffle } from "@/game/letters";
 
 const WORDS_URL = "/dictionary/dictionary.txt";
+const COMMON_URL = "/dictionary/common.txt";
 
 const MIN_WORD_LENGTH = 2;
 
 const PLANT_MIN_LENGTH = 3;
-const PLANT_MAX_LENGTH = 8;
+const PLANT_MAX_LENGTH = 12;
 
 const CODE_A = 65;
 const ALPHABET_SIZE = 26;
 
+/** How quickly commonness falls with rank. */
+const COMMONNESS_FALLOFF = 8000;
+
 export type Dictionary = {
+  /** If a word is in the dictionary. Ignores case and surrounding spaces. */
   has: (word: string) => boolean;
+
+  /** If at least one word can be spelt using some or all of the letters. */
   canSpellFrom: (letters: string) => boolean;
+
+  /** Every word that can be spelt using some or all of the letters. */
+  findWords: (letters: string) => string[];
+
+  /**
+   * Rates how well known a word is.
+   *
+   * @param word - The word to rate. Ignores case and surrounding spaces.
+   * @returns A number from 0 to 1. The most common word is 1, less common words are lower, and words outside the common list are 0.
+   */
+  commonness: (word: string) => number;
+
+  /**
+   * Makes letters for neutral tiles, guaranteed to contain at least one valid word.
+   *
+   * @param count - How many letters to make.
+   * @returns `count` letters in random order, containing the letters of one dictionary word whenever `count` is at least 2.
+   */
   dealLetters: (count: number) => string[];
 };
 
+/** Trims a word and uppercases it so it matches the dictionary's format. */
 const normalize = (word: string): string => word.trim().toUpperCase();
 
+/** Counts how many times each letter A-Z appears, indexed from A. */
 const countLetters = (letters: string): number[] => {
   const counts = new Array<number>(ALPHABET_SIZE).fill(0);
   for (const letter of letters) {
@@ -27,6 +54,13 @@ const countLetters = (letters: string): number[] => {
   return counts;
 };
 
+/**
+ * Checks if a word can be spelt from the letter counts.
+ *
+ * @param word - An uppercase word of letters A-Z.
+ * @param counts - How many of each letter are available, from {@link countLetters}.
+ * @returns `true` if the word fits.
+ */
 const fits = (word: string, counts: number[]): boolean => {
   let used = 0;
   let ok = true;
@@ -44,14 +78,22 @@ const fits = (word: string, counts: number[]): boolean => {
 };
 
 /**
- * Builds a dictionary from a cleaned word list produced by the built script. Entries shorter than the minimum length, such as a trailing blank line, are skipped.
+ * Builds a dictionary from a cleaned word list produced by the build script.
+ *
+ * Entries shorter than the minimum length, such as a trailing blank line, are skipped.
  *
  * @param words - The word list.
- * @returns A dictionary that can look up words, check that `letters` can spell a word, and deal letters.
+ * @param commonWords - The common word list sorted by frequency.
+ * @returns A dictionary for looking up words, finding words that can be spelt from a set of letters, and dealing letters.
  */
-export const createDictionary = (words: string[]): Dictionary => {
+export const createDictionary = (
+  words: string[],
+  commonWords: string[] = [],
+): Dictionary => {
   const playable = words.filter((word) => word.length >= MIN_WORD_LENGTH);
   const set = new Set(playable);
+  const ranked = commonWords.filter((word) => word.length >= MIN_WORD_LENGTH);
+  const ranks = new Map(ranked.map((word, rank) => [word, rank]));
 
   const buckets: string[][] = Array.from(
     { length: PLANT_MAX_LENGTH + 1 },
@@ -68,6 +110,16 @@ export const createDictionary = (words: string[]): Dictionary => {
     canSpellFrom: (letters) => {
       const counts = countLetters(normalize(letters));
       return playable.some((word) => fits(word, counts));
+    },
+
+    findWords: (letters) => {
+      const counts = countLetters(normalize(letters));
+      return playable.filter((word) => fits(word, counts));
+    },
+
+    commonness: (word) => {
+      const rank = ranks.get(normalize(word));
+      return rank === undefined ? 0 : Math.exp(-rank / COMMONNESS_FALLOFF);
     },
 
     dealLetters: (count) => {
@@ -92,15 +144,26 @@ export const createDictionary = (words: string[]): Dictionary => {
 };
 
 /**
- * Fetches the word list and builds a dictionary.
+ * Fetches the word list and the common word list and builds a dictionary.
+ *
+ * If the common list is missing, the dictionary doesn't treat any word as common.
  *
  * @returns The dictionary.
  * @throws If the word list file cannot be fetched.
  */
 export const loadDictionary = async (): Promise<Dictionary> => {
-  const response = await fetch(WORDS_URL);
-  if (!response.ok) throw new Error(`Could not load words: ${response.status}`);
+  const [wordsResponse, commonResponse] = await Promise.all([
+    fetch(WORDS_URL),
+    fetch(COMMON_URL),
+  ]);
 
-  const text = await response.text();
-  return createDictionary(text.split("\n"));
+  if (!wordsResponse.ok) {
+    throw new Error(`Could not load words: ${wordsResponse.status}`);
+  }
+
+  const words = (await wordsResponse.text()).split("\n");
+  const commonWords = commonResponse.ok
+    ? (await commonResponse.text()).split("\n")
+    : [];
+  return createDictionary(words, commonWords);
 };
