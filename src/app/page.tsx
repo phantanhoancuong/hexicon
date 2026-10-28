@@ -1,31 +1,36 @@
 import Link from "next/link";
 
-import Game from "@/components/Game";
 import Icon from "@/components/Icon";
-import ThemeToggle from "@/components/ThemeProvider";
 
-import { crown } from "@/icons";
+import { group, robot } from "@/icons";
+
+const BUTTON_CLASS =
+  "flex h-12 w-full items-center justify-center gap-2 rounded-md font-semibold tracking-wide";
 
 export default function Home() {
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background font-mono text-foreground">
-      <header className="flex h-14 w-full shrink-0 items-center justify-between border-b border-border px-4 sm:h-16 sm:px-8">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-accent"
-          aria-label="Hexicon home"
-        >
-          <Icon className="h-[1.75em] w-[1.75em]" src={crown} alt="" />
-          <span className="text-lg leading-none font-semibold tracking-wide text-foreground sm:text-xl">
-            HEXICON
-          </span>
-        </Link>
-        <ThemeToggle />
-      </header>
+    <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-12">
+      <h1 className="font-mono text-4xl font-semibold tracking-widest">
+        HEXICON
+      </h1>
 
-      <main className="flex min-h-0 flex-1 justify-center px-2 py-2 sm:px-8 sm:py-4">
-        <Game />
-      </main>
+      <nav className="flex w-full max-w-xs flex-col gap-3">
+        <Link
+          href="/play/local"
+          className={`${BUTTON_CLASS} bg-accent text-accent-foreground`}
+        >
+          <Icon src={group} className="size-6" />
+          LOCAL, 2 PLAYERS
+        </Link>
+
+        <span
+          aria-disabled="true"
+          className={`${BUTTON_CLASS} cursor-not-allowed border-2 border-border text-muted-foreground opacity-60`}
+        >
+          <Icon src={robot} className="size-6" />
+          VS BOT, WIP
+        </span>
+      </nav>
     </div>
   );
 }
