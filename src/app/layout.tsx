@@ -4,6 +4,9 @@ import type { Metadata } from "next";
 
 import { Inter, JetBrains_Mono } from "next/font/google";
 
+import BackLink from "@/components/BackLink";
+import ThemeToggle from "@/components/ThemeToggle";
+
 import { ThemeProvider } from "next-themes";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -25,7 +28,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <div className="flex h-dvh flex-col overflow-hidden bg-background font-mono text-foreground">
+            <header className="flex h-12 w-full shrink-0 items-center px-4 sm:px-8">
+              <BackLink />
+              <div className="ml-auto">
+                <ThemeToggle />
+              </div>
+            </header>
+
+            <main className="flex min-h-0 flex-1 justify-center px-2 pb-2 sm:px-8 sm:pb-4">
+              {children}
+            </main>
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );
