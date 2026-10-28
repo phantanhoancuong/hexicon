@@ -23,13 +23,13 @@ export default function Home() {
           LOCAL, 2 PLAYERS
         </Link>
 
-        <span
-          aria-disabled="true"
-          className={`${BUTTON_CLASS} cursor-not-allowed border-2 border-border text-muted-foreground opacity-60`}
+        <Link
+          href="/play/bot"
+          className={`${BUTTON_CLASS} border-2 border-border`}
         >
           <Icon src={robot} className="size-6" />
-          VS BOT, WIP
-        </span>
+          VS BOT
+        </Link>
       </nav>
     </div>
   );

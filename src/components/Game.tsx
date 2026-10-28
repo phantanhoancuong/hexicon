@@ -7,6 +7,7 @@ import HexGrid from "@/components/HexGrid";
 import Scoreboard from "@/components/Scoreboard";
 import WordDisplay from "@/components/WordDisplay";
 
+import { chooseMove } from "@/game/bot";
 import {
   NOTICE_MS,
   PLAYERS,
@@ -30,6 +31,7 @@ import {
 } from "@/game/game";
 import { coordToKey, getTile, keyToCoord } from "@/game/hex";
 
+import { useBotTurn } from "@/hooks/useBotTurn";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useWordValidator } from "@/hooks/useWordValidator";
 
@@ -42,8 +44,12 @@ const STATUS_MESSAGE = {
   error: "Could not load words. Refresh to retry.",
 } as const;
 
+type GameProps = {
+  botPlayer?: Player;
+};
+
 /** Game state handler. */
-export default function Game() {
+export default function Game({ botPlayer }: GameProps) {
   const [grid, setGrid] = useState<HexTileData[][]>(initHexGrid);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(
     () => new Set(),
@@ -71,6 +77,9 @@ export default function Game() {
     .join("");
   const wordIsValid = isValidWord(word);
   const canSubmit = !result.over && wordIsValid;
+  const isBotTurn =
+    botPlayer === currentPlayer && status === "ready" && !result.over;
+  const canPress = canSubmit && !isBotTurn;
 
   // Letters are dealt once the word list is ready.
   if (dictionary && dealtFor !== dictionary) {
@@ -86,7 +95,7 @@ export default function Game() {
   }, [events]);
 
   const handleSelect = (coord: HexCoord): void => {
-    if (result.over) return;
+    if (result.over || isBotTurn) return;
 
     const tile = getTile(grid, coord);
     if (!tile || !isSelectable(tile)) return;
@@ -182,6 +191,18 @@ export default function Game() {
     onExpire: handlePass,
   });
 
+  const selectKey = (key: string): void =>
+    setSelectedKeys((prev) => new Set(prev).add(key));
+
+  useBotTurn({
+    enabled: isBotTurn,
+    resetKey: turn,
+    chooseMove: () =>
+      dictionary ? chooseMove(grid, currentPlayer, dictionary) : null,
+    onSelect: selectKey,
+    onSubmit: handleSubmit,
+  });
+
   const resetGame = (): void => {
     if (!dictionary) return;
 
@@ -241,9 +262,9 @@ export default function Game() {
       </div>
 
       <button
-        className={`h-10 w-full shrink-0 rounded-md bg-accent font-semibold tracking-wide text-accent-foreground disabled:opacity-40 ${canSubmit ? "cursor-pointer" : "cursor-auto"}`}
+        className={`h-10 w-full shrink-0 rounded-md bg-accent font-semibold tracking-wide text-accent-foreground disabled:opacity-40 ${canPress ? "cursor-pointer" : "cursor-auto"}`}
         onClick={handleSubmit}
-        disabled={!canSubmit}
+        disabled={!canPress}
       >
         SUBMIT
       </button>

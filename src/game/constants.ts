@@ -59,3 +59,9 @@ export const TURN_SECONDS = 60;
 export const NOTICE_MS = 4000;
 
 export const TURN_PAUSE_MS = 2000;
+
+export const BOT_THINK_MS = 1200;
+
+export const BOT_TILE_MS = 350;
+
+export const BOT_SUBMIT_MS = 600;
