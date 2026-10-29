@@ -193,7 +193,7 @@ export default function Game({ botPlayer }: GameProps) {
   };
 
   const secondsLeft = useCountdown({
-    running: status === "ready" && !result.over,
+    running: status === "ready" && !result.over && !promptOpen,
     durationSeconds: TURN_SECONDS,
     startDelayMs: TURN_PAUSE_MS,
     resetKey: turn,
