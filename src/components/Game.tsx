@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import FlipPrompt from "@/components/FlipPrompt";
 import GameOverDialog from "@/components/GameOverDialog";
 import HexGrid from "@/components/HexGrid";
 import Scoreboard from "@/components/Scoreboard";
@@ -33,7 +34,10 @@ import { coordToKey, getTile, keyToCoord } from "@/game/hex";
 
 import { useBotTurn } from "@/hooks/useBotTurn";
 import { useCountdown } from "@/hooks/useCountdown";
+import { useMounted } from "@/hooks/useMounted";
 import { useWordValidator } from "@/hooks/useWordValidator";
+
+import { useFlip } from "@/lib/settings";
 
 import { GameEvent } from "@/types/GameEvent";
 import { HexCoord, HexTileData, Player } from "@/types/HexTile";
@@ -64,6 +68,8 @@ export default function Game({ botPlayer }: GameProps) {
   const [dealtFor, setDealtFor] = useState<Dictionary | null>(null);
   const [events, setEvents] = useState<GameEvent[]>([]);
   const { status, dictionary, isValidWord } = useWordValidator();
+  const [flip, setFlip] = useFlip();
+  const mounted = useMounted();
 
   const result = getGameResult(grid);
   const capturableKeys = getCapturableKeys(grid, selectedKeys, currentPlayer);
@@ -80,6 +86,9 @@ export default function Game({ botPlayer }: GameProps) {
   const isBotTurn =
     botPlayer === currentPlayer && status === "ready" && !result.over;
   const canPress = canSubmit && !isBotTurn;
+  const promptOpen = mounted && flip === null && botPlayer === undefined;
+  const isFlipped =
+    flip === true && botPlayer === undefined && currentPlayer === PLAYERS[1];
 
   // Letters are dealt once the word list is ready.
   if (dictionary && dealtFor !== dictionary) {
@@ -184,7 +193,7 @@ export default function Game({ botPlayer }: GameProps) {
   };
 
   const secondsLeft = useCountdown({
-    running: status === "ready" && !result.over,
+    running: status === "ready" && !result.over && !promptOpen,
     durationSeconds: TURN_SECONDS,
     startDelayMs: TURN_PAUSE_MS,
     resetKey: turn,
@@ -220,54 +229,60 @@ export default function Game({ botPlayer }: GameProps) {
   const message = statusMessage || notice;
 
   return (
-    <div className="flex h-full w-full max-w-xl flex-col items-center justify-center gap-(--gap) [--gap:clamp(0.5rem,1.5dvh,1rem)]">
-      <Scoreboard
-        wins={wins}
-        currentPlayer={currentPlayer}
-        turn={turn}
-        secondsLeft={secondsLeft}
-      />
-
-      <div className="relative flex h-8 w-full shrink-0 items-center justify-center">
-        {message && (
-          <span
-            key={message}
-            aria-hidden
-            className={
-              statusMessage
-                ? "px-2 text-center font-sans text-base leading-6 font-medium text-foreground"
-                : "animate-[notice-pop_0.3s_ease-out] rounded-full bg-foreground px-4 py-1 text-center font-sans text-base leading-6 font-semibold text-background motion-reduce:animate-none"
-            }
-          >
-            {message}
-          </span>
-        )}
-
-        <p role="status" className="sr-only">
-          {message}
-        </p>
-      </div>
-
-      <HexGrid
-        grid={grid}
-        selectedKeys={selectedKeys}
-        capturableKeys={capturableKeys}
-        currentPlayer={currentPlayer}
-        neutralizedKeys={neutralizedKeys}
-        onSelect={handleSelect}
-      />
-
-      <div className="w-full shrink-0">
-        <WordDisplay word={word} isValid={wordIsValid} />
-      </div>
-
-      <button
-        className={`h-10 w-full shrink-0 rounded-md bg-accent font-semibold tracking-wide text-accent-foreground disabled:opacity-40 ${canPress ? "cursor-pointer" : "cursor-auto"}`}
-        onClick={handleSubmit}
-        disabled={!canPress}
+    <div className="flex h-full w-full max-w-xl justify-center">
+      <div
+        className={`flex h-full w-full flex-col items-center justify-center gap-(--gap) transition-transform duration-700 [--gap:clamp(0.5rem,1.5dvh,1rem)] motion-reduce:transition-none ${isFlipped ? "rotate-180" : ""}`}
       >
-        SUBMIT
-      </button>
+        <Scoreboard
+          wins={wins}
+          currentPlayer={currentPlayer}
+          turn={turn}
+          secondsLeft={secondsLeft}
+        />
+
+        <div className="relative flex h-8 w-full shrink-0 items-center justify-center">
+          {message && (
+            <span
+              key={message}
+              aria-hidden
+              className={
+                statusMessage
+                  ? "px-2 text-center font-sans text-base leading-6 font-medium text-foreground"
+                  : "animate-[notice-pop_0.3s_ease-out] rounded-full bg-foreground px-4 py-1 text-center font-sans text-base leading-6 font-semibold text-background motion-reduce:animate-none"
+              }
+            >
+              {message}
+            </span>
+          )}
+
+          <p role="status" className="sr-only">
+            {message}
+          </p>
+        </div>
+
+        <HexGrid
+          grid={grid}
+          selectedKeys={selectedKeys}
+          capturableKeys={capturableKeys}
+          currentPlayer={currentPlayer}
+          neutralizedKeys={neutralizedKeys}
+          onSelect={handleSelect}
+        />
+
+        <div className="w-full shrink-0">
+          <WordDisplay word={word} isValid={wordIsValid} />
+        </div>
+
+        <button
+          className={`h-10 w-full shrink-0 rounded-md bg-accent font-semibold tracking-wide text-accent-foreground disabled:opacity-40 ${canPress ? "cursor-pointer" : "cursor-auto"}`}
+          onClick={handleSubmit}
+          disabled={!canPress}
+        >
+          SUBMIT
+        </button>
+      </div>
+
+      {promptOpen && <FlipPrompt onChoose={setFlip} />}
 
       {result.over && (
         <GameOverDialog winner={result.winner} resetGame={resetGame} />
