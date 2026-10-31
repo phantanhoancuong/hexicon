@@ -12,7 +12,7 @@ type DictionaryState =
  *
  * @returns `status` of the load, and `isValidWord`, which returns `false` until the list is ready.
  */
-export const useWordValidator = (): {
+export const useDictionary = (): {
   status: DictionaryState["status"];
   dictionary: Dictionary | null;
   isValidWord: (word: string) => boolean;

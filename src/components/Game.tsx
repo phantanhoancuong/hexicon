@@ -34,8 +34,8 @@ import { coordToKey, getTile, keyToCoord } from "@/game/hex";
 
 import { useBotTurn } from "@/hooks/useBotTurn";
 import { useCountdown } from "@/hooks/useCountdown";
+import { useDictionary } from "@/hooks/useDictionary";
 import { useMounted } from "@/hooks/useMounted";
-import { useWordValidator } from "@/hooks/useWordValidator";
 
 import { useFlip } from "@/lib/settings";
 
@@ -67,7 +67,7 @@ export default function Game({ botPlayer }: GameProps) {
   const [passStarter, setPassStarter] = useState<Player | null>(null);
   const [dealtFor, setDealtFor] = useState<Dictionary | null>(null);
   const [events, setEvents] = useState<GameEvent[]>([]);
-  const { status, dictionary, isValidWord } = useWordValidator();
+  const { status, dictionary, isValidWord } = useDictionary();
   const [flip, setFlip] = useFlip();
   const mounted = useMounted();
 
