@@ -143,6 +143,9 @@ export const createDictionary = (
   };
 };
 
+let cachedPromise: Promise<Dictionary> | null = null;
+let cachedDictionary: Dictionary | null = null;
+
 /**
  * Fetches the word list and the common word list and builds a dictionary.
  *
@@ -151,19 +154,42 @@ export const createDictionary = (
  * @returns The dictionary.
  * @throws If the word list file cannot be fetched.
  */
-export const loadDictionary = async (): Promise<Dictionary> => {
+const fetchDictionary = async (): Promise<Dictionary> => {
   const [wordsResponse, commonResponse] = await Promise.all([
     fetch(WORDS_URL),
     fetch(COMMON_URL),
   ]);
 
-  if (!wordsResponse.ok) {
+  if (!wordsResponse.ok)
     throw new Error(`Could not load words: ${wordsResponse.status}`);
-  }
 
   const words = (await wordsResponse.text()).split("\n");
-  const commonWords = commonResponse.ok
+  const common = commonResponse.ok
     ? (await commonResponse.text()).split("\n")
     : [];
-  return createDictionary(words, commonWords);
+  return createDictionary(words, common);
 };
+
+/**
+ * Fetches and caches the dictionary (words + commons).
+ *
+ * @returns The dictionary.
+ * @throws If the word list cannot be fetched.
+ */
+export const loadDictionary = (): Promise<Dictionary> => {
+  cachedPromise ??= fetchDictionary()
+    .then((dictionary) => {
+      cachedDictionary = dictionary;
+      return cachedDictionary;
+    })
+    .catch((error) => {
+      cachedPromise = null;
+      throw error;
+    });
+  return cachedPromise;
+};
+
+/**
+ * Returns the dictionary if it has already loaded, or `null` if it's not loaded yet.
+ */
+export const getDictionary = (): Dictionary | null => cachedDictionary;

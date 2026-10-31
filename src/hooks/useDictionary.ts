@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { Dictionary, loadDictionary } from "@/game/dictionary";
+import { Dictionary, getDictionary, loadDictionary } from "@/game/dictionary";
 
 type DictionaryState =
   | { status: "loading" }
@@ -8,20 +8,27 @@ type DictionaryState =
   | { status: "error" };
 
 /**
- * Loads the word list once and provides a word check.
+ * Loads the word list and provides a word check.
  *
- * @returns `status` of the load, and `isValidWord`, which returns `false` until the list is ready.
+ * @returns `status` of the load, the dictionary data, and `isValidWord()`, which returns `false` until the list is ready.
  */
 export const useDictionary = (): {
   status: DictionaryState["status"];
   dictionary: Dictionary | null;
   isValidWord: (word: string) => boolean;
 } => {
-  const [dictionaryState, setDictionaryState] = useState<DictionaryState>({
-    status: "loading",
-  });
+  const [dictionaryState, setDictionaryState] = useState<DictionaryState>(
+    () => {
+      const dictionary = getDictionary();
+      return dictionary
+        ? { status: "ready", dictionary }
+        : { status: "loading" };
+    },
+  );
 
   useEffect(() => {
+    if (getDictionary()) return;
+
     let cancelled = false;
 
     const load = async () => {
