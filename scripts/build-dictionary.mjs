@@ -32,6 +32,7 @@ for (const line of readFileSync(RAW, "utf-8").split(/\r?\n/)) {
   if (rankedCommonWords.length >= COMMON_LIMIT) break;
 }
 
+// `game/dictionary.ts` performs binary searches on this list so it must be sorted.
 const sortedUncommonWords = [...uncommonWords].sort();
 mkdirSync(OUTPUT_FOLDER, { recursive: true });
 writeFileSync(UNCOMMON_FILE, sortedUncommonWords.join("\n") + "\n");
