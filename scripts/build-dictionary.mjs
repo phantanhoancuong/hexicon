@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const root = process.cwd();
 const OUTPUT_FOLDER = resolve(root, "public/dictionary");
 
-const RAW = resolve(root, "data/dictionary/frequencies/en-full.txt");
+const RAW = resolve(root, "data/dictionary/frequencies/en-frequencies.txt");
 const SOURCE = resolve(root, "data/dictionary/re-enable/re-enable.txt");
 const COMMON_FILE = resolve(OUTPUT_FOLDER, "common.txt");
 const UNCOMMON_FILE = resolve(OUTPUT_FOLDER, "uncommon.txt");
