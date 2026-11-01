@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 
 import BackLink from "@/components/BackLink";
+import DictionaryPreload from "@/components/DictionaryPreload";
 import FlipToggle from "@/components/FlipToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <ThemeProvider storageKey="hexicon:theme">
+          <DictionaryPreload />
           <div className="flex h-dvh flex-col overflow-hidden bg-background font-mono text-foreground">
             <header className="flex h-12 w-full shrink-0 items-center px-4 sm:px-8">
               <BackLink />

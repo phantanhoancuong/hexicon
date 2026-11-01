@@ -1,7 +1,7 @@
 import { pickRandomLetter, shuffle } from "@/game/letters";
 
-const WORDS_URL = "/dictionary/dictionary.txt";
 const COMMON_URL = "/dictionary/common.txt";
+const UNCOMMON_URL = "/dictionary/uncommon.txt";
 
 const MIN_WORD_LENGTH = 2;
 
@@ -78,21 +78,43 @@ const fits = (word: string, counts: number[]): boolean => {
 };
 
 /**
- * Builds a dictionary from a cleaned word list produced by the build script.
+ * Checks if a word is in a list sorted in ascending order.
+ *
+ * @param sorted - A sorted list of strings.
+ * @param word - An uppercase word.
+ * @returns `true` if the word is in the list.
+ */
+const binarySearch = (sorted: string[], word: string): boolean => {
+  let low = 0;
+  let high = sorted.length - 1;
+  while (low <= high) {
+    const middle = (low + high) >>> 1;
+    const candidate = sorted[middle];
+    if (candidate === word) return true;
+    if (candidate < word) low = middle + 1;
+    else high = middle - 1;
+  }
+  return false;
+};
+
+/**
+ * Builds a dictionary from the common and uncommon word lists produced by the build script.
  *
  * Entries shorter than the minimum length, such as a trailing blank line, are skipped.
  *
- * @param words - The word list.
- * @param commonWords - The common word list sorted by frequency.
+ * @param commonWords - List of common words, sorted from most common to least common.
+ * @param uncommonWords - List of remaining valid words, sorted in ascending order. Defaults to none. The lists must NOT share words.
  * @returns A dictionary for looking up words, finding words that can be spelt from a set of letters, and dealing letters.
  */
 export const createDictionary = (
-  words: string[],
-  commonWords: string[] = [],
+  commonWords: string[],
+  uncommonWords: string[] = [],
 ): Dictionary => {
-  const playable = words.filter((word) => word.length >= MIN_WORD_LENGTH);
-  const set = new Set(playable);
   const ranked = commonWords.filter((word) => word.length >= MIN_WORD_LENGTH);
+  const uncommon = uncommonWords.filter(
+    (word) => word.length >= MIN_WORD_LENGTH,
+  );
+  const playable = ranked.concat(uncommon);
   const ranks = new Map(ranked.map((word, rank) => [word, rank]));
 
   const buckets: string[][] = Array.from(
@@ -105,7 +127,10 @@ export const createDictionary = (
   }
 
   return {
-    has: (word) => set.has(normalize(word)),
+    has: (word) => {
+      const normalized = normalize(word);
+      return ranks.has(normalized) || binarySearch(uncommon, normalized);
+    },
 
     canSpellFrom: (letters) => {
       const counts = countLetters(normalize(letters));
@@ -143,27 +168,57 @@ export const createDictionary = (
   };
 };
 
+let cachedPromise: Promise<Dictionary> | null = null;
+let cachedDictionary: Dictionary | null = null;
+
 /**
- * Fetches the word list and the common word list and builds a dictionary.
+ * Fetches a word list file.
  *
- * If the common list is missing, the dictionary doesn't treat any word as common.
+ * @param url - The word list file to fetch.
+ * @returns The entries of the file, organized by one per line.
+ * @throws If the file cannot be fetched.
+ */
+const fetchWordList = async (url: string): Promise<string[]> => {
+  const response = await fetch(url);
+  if (!response.ok)
+    throw new Error(`Could not load ${url}: ${response.status}`);
+  return (await response.text()).split("\n");
+};
+
+/**
+ * Fetches the common and uncommon word lists and builds a dictionary.
  *
  * @returns The dictionary.
- * @throws If the word list file cannot be fetched.
+ * @throws If either word list cannot be fetched.
  */
-export const loadDictionary = async (): Promise<Dictionary> => {
-  const [wordsResponse, commonResponse] = await Promise.all([
-    fetch(WORDS_URL),
-    fetch(COMMON_URL),
+const fetchDictionary = async (): Promise<Dictionary> => {
+  const [commonWords, uncommonWords] = await Promise.all([
+    fetchWordList(COMMON_URL),
+    fetchWordList(UNCOMMON_URL),
   ]);
-
-  if (!wordsResponse.ok) {
-    throw new Error(`Could not load words: ${wordsResponse.status}`);
-  }
-
-  const words = (await wordsResponse.text()).split("\n");
-  const commonWords = commonResponse.ok
-    ? (await commonResponse.text()).split("\n")
-    : [];
-  return createDictionary(words, commonWords);
+  return createDictionary(commonWords, uncommonWords);
 };
+
+/**
+ * Fetches and caches the dictionary (common and uncommon words).
+ *
+ * @returns The dictionary.
+ * @throws If either word list cannot be fetched.
+ */
+export const loadDictionary = (): Promise<Dictionary> => {
+  cachedPromise ??= fetchDictionary()
+    .then((dictionary) => {
+      cachedDictionary = dictionary;
+      return cachedDictionary;
+    })
+    .catch((error) => {
+      cachedPromise = null;
+      throw error;
+    });
+  return cachedPromise;
+};
+
+/**
+ * Returns the dictionary if it has already loaded, or `null` if it's not loaded yet.
+ */
+export const getDictionary = (): Dictionary | null => cachedDictionary;

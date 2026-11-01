@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dictionary": "node scripts/build-dictionary.mjs && node scripts/build-common.mjs",
+    "dictionary": "node scripts/build-dictionary.mjs",
     "dictionary:trim": "node scripts/trim-frequencies.mjs",
     "dev": "npm run dictionary && next dev",
     "build": "npm run dictionary && next build",
@@ -26,6 +26,7 @@
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
