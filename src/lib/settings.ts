@@ -26,6 +26,6 @@ export const useMode = createSetting<Mode>(
 
 export const useAlternate = createSetting<boolean>(
   "alternate",
-  false,
+  true,
   (value): value is boolean => typeof value === "boolean",
 );

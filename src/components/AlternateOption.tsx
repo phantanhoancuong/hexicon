@@ -9,8 +9,7 @@ export default function AlternateOption() {
   return (
     <Toggle
       label="ALTERNATE FIRST TURN"
-      badge="WIP"
-      description="The first turn alternates between players between each match."
+      description="Players take turns going first between each new game."
       checked={alternate}
       onChange={setAlternate}
     />
