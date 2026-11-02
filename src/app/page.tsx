@@ -1,11 +1,4 @@
-import Link from "next/link";
-
-import Icon from "@/components/Icon";
-
-import { group, robot } from "@/icons";
-
-const BUTTON_CLASS =
-  "flex h-12 w-full items-center justify-center gap-2 rounded-md font-semibold tracking-wide";
+import MenuPanel from "@/components/MenuPanel";
 
 export default function Home() {
   return (
@@ -14,22 +7,8 @@ export default function Home() {
         HEXICON
       </h1>
 
-      <nav className="flex w-full max-w-xs flex-col gap-3">
-        <Link
-          href="/play/local"
-          className={`${BUTTON_CLASS} bg-accent text-accent-foreground`}
-        >
-          <Icon src={group} className="size-6" />
-          LOCAL, 2 PLAYERS
-        </Link>
-
-        <Link
-          href="/play/bot"
-          className={`${BUTTON_CLASS} border-2 border-border`}
-        >
-          <Icon src={robot} className="size-6" />
-          VS BOT
-        </Link>
+      <nav className="w-full max-w-xs">
+        <MenuPanel />
       </nav>
     </div>
   );
