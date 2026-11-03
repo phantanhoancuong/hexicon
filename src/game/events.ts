@@ -1,13 +1,22 @@
-import { GameEvent } from "@/types/GameEvent";
+import { playerName } from "@/game/names";
 
-const describeEvent = (event: GameEvent): string => {
+import { GameEvent } from "@/types/GameEvent";
+import { Player } from "@/types/HexTile";
+
+const describeEvent = (event: GameEvent, botPlayer?: Player): string => {
+  const name = (player: Player): string => playerName(player, botPlayer);
+
   switch (event.type) {
     case "timeout":
-      return `Player ${event.player} timed out`;
+      return `${name(event.player)} timed out`;
+    case "pass":
+      return `${name(event.player)} passed`;
+    case "played":
+      return `${name(event.player)} played ${event.word}`;
     case "capital-captured":
-      return `Capital captured, Player ${event.captor} goes again`;
+      return `Capital captured, ${name(event.captor)} goes again`;
     case "capital-reformed":
-      return `Player ${event.player} gets a new capital`;
+      return `${name(event.player)} gets a new capital`;
     case "redeal":
       return event.reason === "all-passed"
         ? "Everyone passed, new letters"
@@ -18,14 +27,33 @@ const describeEvent = (event: GameEvent): string => {
 const PRIORITY: GameEvent["type"][] = [
   "redeal",
   "capital-captured",
+  "played",
   "timeout",
+  "pass",
   "capital-reformed",
 ];
 
-export const describeEvents = (events: GameEvent[]): string => {
+/**
+ * Picks the most important notice and words it.
+ *
+ * @param events - The notices for this turn.
+ * @param botPlayer - The player the bot controls. Leave out for local play.
+ * @returns The message to show, or an empty string if there is none.
+ */
+/**
+ * Picks out the most important notice and dresses it up.
+ *
+ * @param events - The notices for this turn.
+ * @param botPlayer - Optional player the bot controls.
+ * @returns The message to show, or `""` if there is none.
+ */
+export const describeEvents = (
+  events: GameEvent[],
+  botPlayer?: Player,
+): string => {
   for (const type of PRIORITY) {
     const event = events.find((e) => e.type === type);
-    if (event) return describeEvent(event);
+    if (event) return describeEvent(event, botPlayer);
   }
   return "";
 };

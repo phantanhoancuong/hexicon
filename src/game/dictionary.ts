@@ -39,6 +39,8 @@ export type Dictionary = {
    * @returns `count` letters in random order, containing the letters of one dictionary word whenever `count` is at least 2.
    */
   dealLetters: (count: number) => string[];
+
+  isCommon: (word: string) => boolean;
 };
 
 /** Trims a word and uppercases it so it matches the dictionary's format. */
@@ -165,6 +167,8 @@ export const createDictionary = (
       while (letters.length < count) letters.push(pickRandomLetter());
       return shuffle(letters);
     },
+
+    isCommon: (word: string): boolean => ranks.has(word),
   };
 };
 

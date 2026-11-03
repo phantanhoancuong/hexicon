@@ -1,6 +1,7 @@
 import { describeEvents } from "@/game/events";
 
 import { GameEvent } from "@/types/GameEvent";
+import { Player } from "@/types/HexTile";
 
 const STATUS_MESSAGE = {
   loading: "Loading word list...",
@@ -11,11 +12,17 @@ const STATUS_MESSAGE = {
 type StatusMessageProps = {
   status: keyof typeof STATUS_MESSAGE;
   events: GameEvent[];
+  /** Optional player the bot controls. */
+  botPlayer?: Player;
 };
 
-export default function StatusMessage({ status, events }: StatusMessageProps) {
+export default function StatusMessage({
+  status,
+  events,
+  botPlayer,
+}: StatusMessageProps) {
   const statusMessage = STATUS_MESSAGE[status];
-  const message = statusMessage || describeEvents(events);
+  const message = statusMessage || describeEvents(events, botPlayer);
 
   return (
     <div className="relative flex h-8 w-full shrink-0 items-center justify-center">

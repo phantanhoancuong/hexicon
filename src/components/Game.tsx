@@ -10,6 +10,7 @@ import StatusMessage from "@/components/StatusMessage";
 import WordDisplay from "@/components/WordDisplay";
 
 import { chooseMove } from "@/game/bot";
+import { PROFILES } from "@/game/botProfiles";
 import { PLAYERS, TURN_PAUSE_MS, TURN_SECONDS } from "@/game/constants";
 
 import { Dictionary } from "@/game/dictionary";
@@ -33,7 +34,7 @@ import { useDictionary } from "@/hooks/useDictionary";
 import { useMounted } from "@/hooks/useMounted";
 import { useNoticeEvents } from "@/hooks/useNoticeEvents";
 
-import { useAlternate, useFlip } from "@/lib/settings";
+import { useAlternate, useDifficulty, useFlip } from "@/lib/settings";
 
 import { GameEvent } from "@/types/GameEvent";
 import { HexCoord, HexTileData, Player } from "@/types/HexTile";
@@ -102,6 +103,7 @@ export default function Game({ botPlayer }: GameProps) {
   const { status, dictionary, isValidWord } = useDictionary();
   const [flip, setFlip] = useFlip();
   const [alternate] = useAlternate();
+  const [difficulty] = useDifficulty();
   const mounted = useMounted();
 
   const result = getGameResult(grid);
@@ -159,8 +161,8 @@ export default function Game({ botPlayer }: GameProps) {
   /**
    * Plays the selected word and passes the turn:
    *
-   * 1. Captures elligible tiles, and records a win if that ends the game.
-   * 2. Pick the next player.
+   * 1. Captures eligible tiles, and records a win if that ends the game.
+   * 2. Picks the next player.
    * 3. Gives that player a new capital if theirs was captured.
    * 4. Redeals the letters if no valid word can be played.
    *
@@ -197,9 +199,10 @@ export default function Game({ botPlayer }: GameProps) {
       })),
       ...next.events,
     ];
-    if (playableGrid !== next.grid) {
+    if (playableGrid !== next.grid)
       events.push({ type: "redeal", reason: "no-playable-word" });
-    }
+    if (botPlayer === currentPlayer)
+      events.push({ type: "played", player: currentPlayer, word });
 
     applyTurn({
       ...next,
@@ -211,13 +214,15 @@ export default function Game({ botPlayer }: GameProps) {
   };
 
   /**
-   * Passes the turn when time runs out.
+   * Passes the turn, because time ran out or the bot has no move.
    *
    * 1. Picks the next player.
    * 2. Gives that player a new capital if theirs was captured.
    * 3. Redeals all letters if every player has passed in a row.
+   *
+   * @param reason - Why the turn is passed, shown as a notice. Defaults to a timeout.
    */
-  const handlePass = (): void => {
+  const handlePass = (reason: "timeout" | "pass" = "timeout"): void => {
     if (result.over || !dictionary) return;
 
     const nextToMove = nextPlayer(currentPlayer);
@@ -226,7 +231,7 @@ export default function Game({ botPlayer }: GameProps) {
     const next = enterTurn(grid, pendingCapitals, nextToMove);
 
     const events: GameEvent[] = [
-      { type: "timeout", player: currentPlayer },
+      { type: reason, player: currentPlayer },
       ...next.events,
     ];
     if (allPassed) events.push({ type: "redeal", reason: "all-passed" });
@@ -245,10 +250,10 @@ export default function Game({ botPlayer }: GameProps) {
     durationSeconds: TURN_SECONDS,
     startDelayMs: TURN_PAUSE_MS,
     resetKey: turn,
-    onExpire: handlePass,
+    onExpire: () => handlePass(),
   });
 
-  /** Selects a tile for the bot.*/
+  /** Selects a tile for the bot. */
   const selectKey = (key: string): void =>
     setSelectedKeys((prev) => new Set(prev).add(key));
 
@@ -256,9 +261,12 @@ export default function Game({ botPlayer }: GameProps) {
     enabled: isBotTurn,
     resetKey: turn,
     chooseMove: () =>
-      dictionary ? chooseMove(grid, currentPlayer, dictionary) : null,
+      dictionary
+        ? chooseMove(grid, currentPlayer, dictionary, PROFILES[difficulty])
+        : null,
     onSelect: selectKey,
     onSubmit: handleSubmit,
+    onPass: () => handlePass("pass"),
   });
 
   /**
@@ -291,9 +299,10 @@ export default function Game({ botPlayer }: GameProps) {
           currentPlayer={currentPlayer}
           turn={turn}
           secondsLeft={secondsLeft}
+          botPlayer={botPlayer}
         />
 
-        <StatusMessage status={status} events={events} />
+        <StatusMessage status={status} events={events} botPlayer={botPlayer} />
 
         <HexGrid
           grid={grid}
@@ -320,7 +329,11 @@ export default function Game({ botPlayer }: GameProps) {
       {promptOpen && <FlipPrompt onChoose={setFlip} />}
 
       {result.over && (
-        <GameOverDialog winner={result.winner} resetGame={resetGame} />
+        <GameOverDialog
+          winner={result.winner}
+          resetGame={resetGame}
+          botPlayer={botPlayer}
+        />
       )}
     </div>
   );
