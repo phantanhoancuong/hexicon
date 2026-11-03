@@ -1,14 +1,19 @@
+import { playerName } from "@/game/names";
+
 import { Player, PLAYER_TAG_CLASS } from "@/types/HexTile";
 
 type GameOverDialogProps = {
   winner: Player;
   resetGame: () => void;
+  /** Optional player the bot controls. */
+  botPlayer?: Player;
 };
 
 /** Modal shown when the game ends, with the winner and a replay button. */
 export default function GameOverDialog({
   winner,
   resetGame,
+  botPlayer,
 }: GameOverDialogProps) {
   return (
     <div
@@ -22,7 +27,7 @@ export default function GameOverDialog({
           <span
             className={`rounded-md px-2 font-semibold ${PLAYER_TAG_CLASS[winner]}`}
           >
-            {`PLAYER ${winner}`}
+            {playerName(winner, botPlayer).toUpperCase()}
           </span>
           <span>wins</span>
         </p>

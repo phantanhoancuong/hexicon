@@ -60,8 +60,10 @@ export const NOTICE_MS = 4000;
 
 export const TURN_PAUSE_MS = 2000;
 
-export const BOT_THINK_MS = 1200;
+export const BOT_THINK_MIN_MS = 2000;
 
-export const BOT_TILE_MS = 350;
+export const BOT_THINK_MAX_MS = 10000;
 
-export const BOT_SUBMIT_MS = 600;
+export const BOT_TILE_MS = 450;
+
+export const BOT_SUBMIT_MS = 2000;

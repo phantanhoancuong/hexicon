@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 
 import {
   BOT_SUBMIT_MS,
-  BOT_THINK_MS,
+  BOT_THINK_MAX_MS,
+  BOT_THINK_MIN_MS,
   BOT_TILE_MS,
   TURN_PAUSE_MS,
 } from "@/game/constants";
@@ -12,18 +13,27 @@ type UseBotTurnOptions = {
   enabled: boolean;
   /** Changes every turn, so the bot plays once a turn. */
   resetKey: number;
-  /** Picks the tile keys to select, in word order, or `null` if there is no move available. */
+  /** Picks the tile keys to select, in word order, or `null` if the bot passes. */
   chooseMove: () => string[] | null;
   /** Adds one tile to the selection. */
   onSelect: (key: string) => void;
   /** Submits the current selection. */
   onSubmit: () => void;
+  /** Passes the turn. Called when the bot has no move to play. */
+  onPass: () => void;
 };
 
 /**
- * Plays the bot's turn: waits out the pause at the start of the turn, picks a move, selects its tiles one at a time, then submits.
+ * Plays the bot's turn:
  *
- * Everything is cancelled if the turn ends, the game resets or the component unmounts.
+ * - Waits out the pause at the start of the turn.
+ * - Thinks for a random time.
+ * - Picks a move.
+ * - Selects its tiles one at a time.
+ * - Holds the finished word for a bit so the player can read it.
+ * - Submits the move.
+ *
+ * If the bot has no move, it passes after the thinking time.
  *
  * @param options - The bot turn settings.
  */
@@ -43,9 +53,15 @@ export const useBotTurn = (options: UseBotTurnOptions): void => {
       timers.push(setTimeout(action, ms));
     };
 
-    later(TURN_PAUSE_MS + BOT_THINK_MS, () => {
+    const thinkMs =
+      BOT_THINK_MIN_MS + Math.random() * (BOT_THINK_MAX_MS - BOT_THINK_MIN_MS);
+
+    later(TURN_PAUSE_MS + thinkMs, () => {
       const move = latest.current.chooseMove();
-      if (!move) return;
+      if (!move) {
+        latest.current.onPass();
+        return;
+      }
 
       move.forEach((key, i) => {
         later((i + 1) * BOT_TILE_MS, () => latest.current.onSelect(key));

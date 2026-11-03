@@ -9,6 +9,8 @@ type ScoreboardProps = {
   currentPlayer: Player;
   turn: number;
   secondsLeft: number | null;
+  /** Optional player the bot controls. */
+  botPlayer?: Player;
 };
 
 /** Shows each player's tag and win count, the turn number and the current word. */
@@ -17,18 +19,29 @@ export default function Scoreboard({
   currentPlayer,
   turn,
   secondsLeft,
+  botPlayer,
 }: ScoreboardProps) {
   return (
     <div className="flex w-full flex-col gap-1">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-        <PlayerTag player={1} wins={wins[1]} isActive={currentPlayer === 1} />
+        <PlayerTag
+          player={1}
+          wins={wins[1]}
+          isActive={currentPlayer === 1}
+          botPlayer={botPlayer}
+        />
         <TurnClock
           durationSeconds={TURN_SECONDS}
           delayMs={TURN_PAUSE_MS}
           secondsLeft={secondsLeft}
           resetKey={turn}
         />
-        <PlayerTag player={2} wins={wins[2]} isActive={currentPlayer === 2} />
+        <PlayerTag
+          player={2}
+          wins={wins[2]}
+          isActive={currentPlayer === 2}
+          botPlayer={botPlayer}
+        />
       </div>
       <div className="flex h-5 items-center justify-center text-sm text-muted-foreground">
         {`Turn ${turn}`}
