@@ -14,18 +14,13 @@ import { PROFILES } from "@/game/botProfiles";
 import { PLAYERS, TURN_PAUSE_MS, TURN_SECONDS } from "@/game/constants";
 
 import { Dictionary } from "@/game/dictionary";
+import { applyMove, createGameState, dealState, nextGame } from "@/game/game";
 import {
-  dealNeutral,
-  ensurePlayable,
   getCapturableKeys,
   getGameResult,
   getNeutralizedKeys,
-  initHexGrid,
   isSelectable,
-  nextPlayer,
-  reformCapital,
-  resolveSubmit,
-} from "@/game/game";
+} from "@/game/grid";
 import { coordToKey, getTile, keyToCoord } from "@/game/hex";
 
 import { useBotTurn } from "@/hooks/useBotTurn";
@@ -36,68 +31,20 @@ import { useNoticeEvents } from "@/hooks/useNoticeEvents";
 
 import { useAlternate, useDifficulty, useFlip } from "@/lib/settings";
 
-import { GameEvent } from "@/types/GameEvent";
-import { HexCoord, HexTileData, Player } from "@/types/HexTile";
+import { GameState, PassReason } from "@/types/GameState";
+import { HexCoord, Player } from "@/types/HexTile";
 
 type GameProps = {
-  /** The player the bot controls. Leave out for local play. */
+  /** Optional bot player. */
   botPlayer?: Player;
 };
 
-/** Things that change when play passes to the next player. */
-type TurnUpdate = {
-  grid: HexTileData[][];
-  /** Players who lost their capital. */
-  pendingCapitals: Set<Player>;
-  /** Notices to show this turn. */
-  events: GameEvent[];
-  nextToMove: Player;
-  /** Who started the current run of passes (doesn't play a move), `null` if no one has passed. */
-  firstPasser: Player | null;
-};
-
-/**
- * Hands the turn to a player.
- *
- * If the player doesn't have a capital, it will be reformed for them.
- *
- * @param grid - The hex grid before the player's turn starts.
- * @param pendingCapitals - Players who lost their capital.
- * @param player - The player whose turn is starting.
- * @returns The hex grid (with a new capital if needed), the players that still need to reform their capitals, and notices to show.
- */
-function enterTurn(
-  grid: HexTileData[][],
-  pendingCapitals: Set<Player>,
-  player: Player,
-): Pick<TurnUpdate, "grid" | "pendingCapitals" | "events"> {
-  const stillPending = new Set(pendingCapitals);
-  const reformed = stillPending.delete(player);
-  const events: GameEvent[] = reformed
-    ? [{ type: "capital-reformed", player }]
-    : [];
-
-  return {
-    grid: reformed ? reformCapital(grid, player) : grid,
-    pendingCapitals: stillPending,
-    events,
-  };
-}
-
 /** Game state handler. */
 export default function Game({ botPlayer }: GameProps) {
-  const [grid, setGrid] = useState<HexTileData[][]>(initHexGrid);
+  const [state, setState] = useState<GameState>(() => createGameState());
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(
     () => new Set(),
   );
-  const [turn, setTurn] = useState<number>(1);
-  const [currentPlayer, setCurrentPlayer] = useState<Player>(PLAYERS[0]);
-  const [gameStarter, setGameStarter] = useState<Player>(PLAYERS[0]);
-  const [wins, setWins] = useState<Record<Player, number>>({ 1: 0, 2: 0 });
-  const [pendingCapitals, setPendingCapitals] = useState<Set<Player>>(
-    () => new Set(),
-  );
-  const [firstPasser, setFirstPasser] = useState<Player | null>(null);
   const [dealtFor, setDealtFor] = useState<Dictionary | null>(null);
   const [events, setEvents] = useNoticeEvents();
   const { status, dictionary, isValidWord } = useDictionary();
@@ -106,6 +53,7 @@ export default function Game({ botPlayer }: GameProps) {
   const [difficulty] = useDifficulty();
   const mounted = useMounted();
 
+  const { grid, turn, currentPlayer, wins } = state;
   const result = getGameResult(grid);
   const capturableKeys = getCapturableKeys(grid, selectedKeys, currentPlayer);
   const neutralizedKeys = getNeutralizedKeys(
@@ -128,18 +76,22 @@ export default function Game({ botPlayer }: GameProps) {
   // Letters are dealt once the word list is ready.
   if (dictionary && dealtFor !== dictionary) {
     setDealtFor(dictionary);
-    setGrid(dealNeutral(grid, dictionary));
+    setState(dealState(state, dictionary));
   }
 
-  /** Applies a finished turn and passes play on. */
-  const applyTurn = (update: TurnUpdate): void => {
-    setGrid(update.grid);
-    setPendingCapitals(update.pendingCapitals);
-    setEvents(update.events);
-    setFirstPasser(update.firstPasser);
+  /**
+   * Shows the state after a move and clears the selection.
+   *
+   * The "played" notice is only shown for the bot's moves, so local play looks the same as before.
+   */
+  const commit = (next: GameState): void => {
+    setState(next);
+    setEvents(
+      next.events.filter(
+        (event) => event.type !== "played" || event.player === botPlayer,
+      ),
+    );
     setSelectedKeys(new Set());
-    setTurn((t) => t + 1);
-    setCurrentPlayer(update.nextToMove);
   };
 
   /** Toggles a tile in the current word. */
@@ -158,91 +110,28 @@ export default function Game({ botPlayer }: GameProps) {
     });
   };
 
-  /**
-   * Plays the selected word and passes the turn:
-   *
-   * 1. Captures eligible tiles, and records a win if that ends the game.
-   * 2. Picks the next player.
-   * 3. Gives that player a new capital if theirs was captured.
-   * 4. Redeals the letters if no valid word can be played.
-   *
-   * Does nothing if the word is not valid.
-   */
+  /** Plays the selected word. Does nothing if the move is refused. */
   const handleSubmit = (): void => {
     if (!canSubmit || !dictionary) return;
 
-    const {
-      grid: nextGrid,
-      extraTurn,
-      lostCapitalPlayers,
-    } = resolveSubmit(grid, selectedKeys, capturableKeys, currentPlayer);
-
-    const nextResult = getGameResult(nextGrid);
-    if (nextResult.over) {
-      const { winner } = nextResult;
-      setWins((w) => ({ ...w, [winner]: w[winner] + 1 }));
-    }
-
-    const nextToMove = extraTurn ? currentPlayer : nextPlayer(currentPlayer);
-    const next = enterTurn(
-      nextGrid,
-      new Set([...pendingCapitals, ...lostCapitalPlayers]),
-      nextToMove,
+    const outcome = applyMove(
+      state,
+      { type: "submit", keys: [...selectedKeys] },
+      dictionary,
     );
-    const playableGrid = ensurePlayable(next.grid, dictionary);
-
-    const events: GameEvent[] = [
-      ...[...lostCapitalPlayers].map((loser): GameEvent => ({
-        type: "capital-captured",
-        captor: currentPlayer,
-        loser,
-      })),
-      ...next.events,
-    ];
-    if (playableGrid !== next.grid)
-      events.push({ type: "redeal", reason: "no-playable-word" });
-    if (botPlayer === currentPlayer)
-      events.push({ type: "played", player: currentPlayer, word });
-
-    applyTurn({
-      ...next,
-      grid: playableGrid,
-      events: nextResult.over ? [] : events,
-      nextToMove,
-      firstPasser: null,
-    });
+    if (outcome.ok) commit(outcome.state);
   };
 
   /**
    * Passes the turn, because time ran out or the bot has no move.
    *
-   * 1. Picks the next player.
-   * 2. Gives that player a new capital if theirs was captured.
-   * 3. Redeals all letters if every player has passed in a row.
-   *
    * @param reason - Why the turn is passed, shown as a notice. Defaults to a timeout.
    */
-  const handlePass = (reason: "timeout" | "pass" = "timeout"): void => {
-    if (result.over || !dictionary) return;
+  const handlePass = (reason: PassReason = "timeout"): void => {
+    if (!dictionary) return;
 
-    const nextToMove = nextPlayer(currentPlayer);
-    const opener = firstPasser ?? currentPlayer;
-    const allPassed = nextToMove === opener;
-    const next = enterTurn(grid, pendingCapitals, nextToMove);
-
-    const events: GameEvent[] = [
-      { type: reason, player: currentPlayer },
-      ...next.events,
-    ];
-    if (allPassed) events.push({ type: "redeal", reason: "all-passed" });
-
-    applyTurn({
-      ...next,
-      grid: allPassed ? dealNeutral(next.grid, dictionary) : next.grid,
-      events,
-      nextToMove,
-      firstPasser: allPassed ? null : opener,
-    });
+    const outcome = applyMove(state, { type: "pass", reason }, dictionary);
+    if (outcome.ok) commit(outcome.state);
   };
 
   const secondsLeft = useCountdown({
@@ -277,16 +166,9 @@ export default function Game({ botPlayer }: GameProps) {
   const resetGame = (): void => {
     if (!dictionary) return;
 
-    const nextStarter = alternate ? nextPlayer(gameStarter) : gameStarter;
-
-    setGrid(dealNeutral(initHexGrid(), dictionary));
+    setState(nextGame(state, dictionary, alternate));
     setEvents([]);
-    setFirstPasser(null);
     setSelectedKeys(new Set());
-    setPendingCapitals(new Set());
-    setTurn(1);
-    setGameStarter(nextStarter);
-    setCurrentPlayer(nextStarter);
   };
 
   return (

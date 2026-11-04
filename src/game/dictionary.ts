@@ -40,6 +40,7 @@ export type Dictionary = {
    */
   dealLetters: (count: number) => string[];
 
+  /** If a word is in the common list. Ignores case and surrounding spaces. */
   isCommon: (word: string) => boolean;
 };
 
@@ -168,7 +169,7 @@ export const createDictionary = (
       return shuffle(letters);
     },
 
-    isCommon: (word: string): boolean => ranks.has(word),
+    isCommon: (word: string): boolean => ranks.has(normalize(word)),
   };
 };
 
