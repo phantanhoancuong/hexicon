@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { Dictionary, getDictionary, loadDictionary } from "@/game/dictionary";
+import { Dictionary } from "@/game/dictionary";
+import { getDictionary, loadDictionary } from "@/lib/dictionaryLoader";
 
 type DictionaryState =
   | { status: "loading" }

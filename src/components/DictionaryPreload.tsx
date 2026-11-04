@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { loadDictionary } from "@/game/dictionary";
+import { loadDictionary } from "@/lib/dictionaryLoader";
 
 /**
  * Starts loading the dictionary in the background.
