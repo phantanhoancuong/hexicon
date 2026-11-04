@@ -35,7 +35,7 @@ import {
   getNeutralizedKeys,
   isSelectable,
   nextPlayer,
-} from "@/game/game";
+} from "@/game/grid";
 import {
   coordToKey,
   getNeighbors,

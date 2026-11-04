@@ -1,345 +1,246 @@
-import { HexCoord, HexTileData, Player } from "@/types/HexTile";
-
+import { PLAYERS } from "@/game/constants";
 import { Dictionary } from "@/game/dictionary";
 import {
-  coordToKey,
-  getNeighbors,
-  getTile,
-  hexDistance,
-  keyToCoord,
-  setTile,
-} from "@/game/hex";
-import { pickRandomLetter } from "@/game/letters";
+  dealNeutral,
+  ensurePlayable,
+  getCapturableKeys,
+  getGameResult,
+  initHexGrid,
+  isSelectable,
+  nextPlayer,
+  reformCapital,
+  resolveSubmit,
+} from "@/game/grid";
+import { getTile, keyToCoord } from "@/game/hex";
 
-import { CAPITAL_COORDS, COLUMN_HEIGHTS, PLAYERS } from "@/game/constants";
+import { GameEvent } from "@/types/GameEvent";
+import {
+  GameState,
+  Move,
+  MoveError,
+  MoveResult,
+  PassReason,
+} from "@/types/GameState";
+import { HexTileData, Player } from "@/types/HexTile";
 
-export type SubmitResult = {
-  grid: HexTileData[][];
-  extraTurn: boolean;
-  lostCapitalPlayers: Set<Player>;
-};
-
-export type GameResult = { over: false } | { over: true; winner: Player };
+type TurnStart = Pick<GameState, "grid" | "pendingCapitals" | "events">;
 
 /**
- * Finds whose turn follows a player's.
+ * Creates the default state of a new match (the neutral tiles don't have any letters yet).
  *
- *
- * @param player - The player who just moved.
- * @returns The next player in turn order.
+ * @param starter - The player who moves first. Defaults to the first player.
+ * @returns The starting state.
  */
-export const nextPlayer = (player: Player): Player =>
-  PLAYERS[(PLAYERS.indexOf(player) + 1) % PLAYERS.length];
+export const createGameState = (starter: Player = PLAYERS[0]): GameState => ({
+  grid: initHexGrid(),
+  turn: 1,
+  currentPlayer: starter,
+  starter,
+  wins: { 1: 0, 2: 0 },
+  pendingCapitals: [],
+  firstPasser: null,
+  events: [],
+});
 
 /**
- * Whether a tile can be part of a selection. Only `neutral` tiles can be selected.
+ * Deals letters onto the neutral tiles of a state.
  *
- * @param tile - The tile to check.
- * @returns `true` if the tile can be selected.
- */
-export const isSelectable = (tile: HexTileData): boolean =>
-  tile.status === "neutral";
-
-/**
- * Assigns every neutral tile a new random letter. Guarantees at least a valid word can be formed.
- *
- * @param grid - Current hex grid state.
+ * @param state - The state to deal into.
  * @param dictionary - Used to plant a word in the dealt letters.
- * @returns A new grid. Tiles that are not `neutral` are unmodified.
+ * @returns A copy of the state with new letters.
  */
-export const dealNeutral = (
-  grid: HexTileData[][],
+export const dealState = (
+  state: GameState,
   dictionary: Dictionary,
-): HexTileData[][] => {
-  const count = grid.reduce(
-    (total, column) => total + column.filter(isSelectable).length,
-    0,
-  );
-  const letters = dictionary.dealLetters(count);
-
-  let next = 0;
-  return grid.map((column) =>
-    column.map((tile) =>
-      isSelectable(tile) ? { ...tile, character: letters[next++] } : tile,
-    ),
-  );
-};
+): GameState => ({ ...state, grid: dealNeutral(state.grid, dictionary) });
 
 /**
- * Whether the selectable tiles can spell at least one word.
+ * Starts the next game on a fresh board, while keeping the win counts.
  *
- * @param grid - Current hex grid state.
- * @param dictionary - The dictionary to check against.
- * @returns `true` if some word can be spelt from the neutral tiles.
+ * @param state - The state of the game that ended.
+ * @param dictionary - Used to deal letters.
+ * @param alternate - Whether the first move alternates between games. If not, the same player starts again.
+ * @returns The state of the new game.
  */
-export const hasPlayableWord = (
-  grid: HexTileData[][],
+export const nextGame = (
+  state: GameState,
   dictionary: Dictionary,
-): boolean =>
-  dictionary.canSpellFrom(
-    grid
-      .flat()
-      .filter(isSelectable)
-      .map((tile) => tile.character)
-      .join(""),
-  );
-
-/**
- * Makes sure a word can be spelt, dealing new letters otherwise.
- *
- * @param grid - Current hex grid state.
- * @param dictionary - The dictionary to check against.
- * @returns The same grid if it is playable, otherwise a grid with new neutral letters.
- */
-export const ensurePlayable = (
-  grid: HexTileData[][],
-  dictionary: Dictionary,
-): HexTileData[][] =>
-  hasPlayableWord(grid, dictionary) ? grid : dealNeutral(grid, dictionary);
-
-/**
- * Creates the starting grid: every tile is uninitialized except each player's capital as well as the capital's neighbors (`neutral`).
- *
- * @returns A starting grid (no assigned letters).
- */
-export const initHexGrid = (): HexTileData[][] => {
-  const grid = COLUMN_HEIGHTS.map((height, column) =>
-    Array.from({ length: height }, (_, i): HexTileData => ({
-      coord: { q: column, r: i - Math.ceil(column / 2) },
-      character: "",
-      status: "uninitialized",
-      isCapital: false,
-    })),
-  );
-
-  const placeCapital = (coord: HexCoord, player: Player) => {
-    setTile(grid, coord, { isCapital: true, status: player });
-    for (const neighbor of getNeighbors(grid, coord)) {
-      if (getTile(grid, neighbor)!.status === "uninitialized")
-        setTile(grid, neighbor, { status: "neutral" });
-    }
-  };
-
-  for (const player of PLAYERS) placeCapital(CAPITAL_COORDS[player], player);
-
-  return grid;
-};
-
-/**
- * Finds which selected tiles would be captured.
- *
- * Selected tiles form islands (connected through neighbors). An island is considered capturable if one of its tiles touches `player`'s territory.
- *
- * All tiles within a capturable island become capturable regardless of whether they touch `player`'s territory directly.
- *
- * @param grid - Current hex grid state.
- * @param selectedKeys - Keys of the tiles the player picked.
- * @param player - The player making the move.
- * @return Keys of the selected tiles belonging to a capturable island.
- */
-export const getCapturableKeys = (
-  grid: HexTileData[][],
-  selectedKeys: Set<string>,
-  player: Player,
-): Set<string> => {
-  const visitedKeys = new Set<string>();
-  const capturableKeys = new Set<string>();
-
-  for (const selectedKey of selectedKeys) {
-    if (visitedKeys.has(selectedKey)) continue;
-
-    const stack: string[] = [selectedKey];
-    const island: string[] = [];
-    let touchesPlayer = false;
-    visitedKeys.add(selectedKey);
-
-    while (stack.length > 0) {
-      const currentKey = stack.pop()!;
-      island.push(currentKey);
-
-      for (const neighbor of getNeighbors(grid, keyToCoord(currentKey))) {
-        if (getTile(grid, neighbor)!.status === player) touchesPlayer = true;
-
-        const neighborKey = coordToKey(neighbor);
-        if (visitedKeys.has(neighborKey) || !selectedKeys.has(neighborKey)) {
-          continue;
-        }
-
-        visitedKeys.add(neighborKey);
-        stack.push(neighborKey);
-      }
-    }
-
-    if (touchesPlayer) island.forEach((key) => capturableKeys.add(key));
-  }
-
-  return capturableKeys;
-};
-/**
- * Finds the tiles that a capture would turn neutral: Tiles next to a captured tile that belong to another player or are `uninitialized`.
- *
- * @param grid - Current hex grid state.
- * @param capturableKeys - Keys of the tiles being captured.
- * @param player - The player making the move.
- * @returns Keys of the tiles that would become `neutral`.
- */
-export const getNeutralizedKeys = (
-  grid: HexTileData[][],
-  capturableKeys: Set<string>,
-  player: Player,
-): Set<string> => {
-  const keys = new Set<string>();
-
-  for (const capturableKey of capturableKeys) {
-    for (const neighbor of getNeighbors(grid, keyToCoord(capturableKey))) {
-      const neighborKey = coordToKey(neighbor);
-      if (capturableKeys.has(neighborKey)) continue;
-
-      const { status } = getTile(grid, neighbor)!;
-      if (status !== player && status !== "neutral") keys.add(neighborKey);
-    }
-  }
-
-  return keys;
-};
-
-/**
- * Applies a submitted move to a copy of the grid.
- *
- * Captured tiles go to `player`. Enemy and uninitialized tiles next to a captured tile become `neutral` with a new letter assigned. Selected tile but are not capturable also get a new letter assigned.
- *
- * @param grid - Current hex grid state.
- * @param selectedKeys - Keys of the tiles the player picked.
- * @param capturableKeys - Subset of `selectedKeys` connected to the `player`'s territory.
- * @param player - The player making the move.
- * @returns The new grid, if the move earns an extra turn (a capital was captured) and which players lost a capital.
- */
-export const resolveSubmit = (
-  grid: HexTileData[][],
-  selectedKeys: Set<string>,
-  capturableKeys: Set<string>,
-  player: Player,
-): SubmitResult => {
-  const newGrid = grid.map((column) => [...column]);
-  const lostCapitalPlayers = new Set<Player>();
-
-  for (const key of getNeutralizedKeys(grid, capturableKeys, player)) {
-    const coord = keyToCoord(key);
-    const tile = getTile(grid, coord)!;
-    if (tile.isCapital && typeof tile.status === "number") {
-      lostCapitalPlayers.add(tile.status);
-    }
-    setTile(newGrid, coord, {
-      status: "neutral",
-      character: pickRandomLetter(),
-      isCapital: false,
-    });
-  }
-
-  for (const key of capturableKeys) {
-    setTile(newGrid, keyToCoord(key), { status: player, character: "" });
-  }
-
-  for (const key of selectedKeys) {
-    if (capturableKeys.has(key)) continue;
-    setTile(newGrid, keyToCoord(key), { character: pickRandomLetter() });
-  }
+  alternate: boolean,
+): GameState => {
+  const starter = alternate ? nextPlayer(state.starter) : state.starter;
 
   return {
-    grid: newGrid,
-    extraTurn: lostCapitalPlayers.size > 0,
-    lostCapitalPlayers,
+    ...dealState(createGameState(starter), dictionary),
+    wins: state.wins,
   };
 };
 
-/** Smallest distance from `from` to any of the target tiles (`Infinity` if none). */
-const minDistance = (from: HexCoord, targets: HexTileData[]): number =>
-  targets.reduce(
-    (min, target) => Math.min(min, hexDistance(from, target.coord)),
-    Infinity,
+/**
+ * Hands the turn a player.
+ *
+ * If the player a lost their capital, a new one is reformed for them.
+ *
+ * @param grid - The hex grid before the player's turn starts.
+ * @param pendingCapitals - Players who lost their capital.
+ * @param player - The player whose turn is starting.
+ * @returns The grid (with a new capital if needed), the players that still need a new capital, and new event notices.
+ */
+const enterTurn = (
+  grid: HexTileData[][],
+  pendingCapitals: Player[],
+  player: Player,
+): TurnStart => {
+  const reformed = pendingCapitals.includes(player);
+
+  return {
+    grid: reformed ? reformCapital(grid, player) : grid,
+    pendingCapitals: pendingCapitals.filter((p) => p !== player),
+    events: reformed ? [{ type: "capital-reformed", player }] : [],
+  };
+};
+
+/** A refused move. */
+const refuse = (reason: MoveError): MoveResult => ({ ok: false, reason });
+
+/**
+ * Plays a word for the current player:
+ * 1. Refuses the move if the tiles or the word are not valid.
+ * 2. Captures the eligible tiles, and records a win if this move ends the game.
+ * 3. Picks the next player.
+ * 4. Gives that player a new capital if theirs was destroyed.
+ * 5. Redeals the letters if no valid word can be played.
+ *
+ * @param state - The state before the move.
+ * @param keys - Keys of the selected tiles, in word order.
+ * @param dictionary - Used to check the word and to redeal.
+ * @returns The state after the move, or why the move was refused.
+ */
+const applySubmit = (
+  state: GameState,
+  keys: string[],
+  dictionary: Dictionary,
+): MoveResult => {
+  if (keys.length === 0) return refuse("empty-selection");
+
+  const selectedKeys = new Set(keys);
+  if (selectedKeys.size !== keys.length) return refuse("invalid-tiles");
+
+  const tiles: HexTileData[] = [];
+  for (const key of keys) {
+    const tile = getTile(state.grid, keyToCoord(key));
+    if (!tile || !isSelectable(tile)) return refuse("invalid-tiles");
+    tiles.push(tile);
+  }
+
+  const word = tiles.map((tile) => tile.character).join("");
+  if (!dictionary.has(word)) return refuse("invalid-word");
+
+  const player = state.currentPlayer;
+  const capturableKeys = getCapturableKeys(state.grid, selectedKeys, player);
+  const { grid, extraTurn, lostCapitalPlayers } = resolveSubmit(
+    state.grid,
+    selectedKeys,
+    capturableKeys,
+    player,
   );
 
-/**
- * Picks the safest tile for a player's new capital.
- *
- * A capital is lost when a tile next to it is captured.
- *
- * So a simple heuristics is used: The tile deepest inside the `player`'s territory, farthest from any tile that they don't own is probably the safest one.
- *
- * Ties go to the tile farthest from enemy tiles, then go to the first tile found.
- *
- * @param grid - Current hex grid state.
- * @param player - The player who needs a capital.
- * @returns The chosen coordinate, or `null` if the player lost all of their tiles.
- */
-export const findCapitalSite = (
-  grid: HexTileData[][],
-  player: Player,
-): HexCoord | null => {
-  const owned: HexTileData[] = [];
-  const notOwned: HexTileData[] = [];
-  const enemies: HexTileData[] = [];
+  const result = getGameResult(grid);
+  const wins = result.over
+    ? { ...state.wins, [result.winner]: state.wins[result.winner] + 1 }
+    : state.wins;
 
-  for (const column of grid) {
-    for (const tile of column) {
-      if (tile.status === player) owned.push(tile);
-      else {
-        notOwned.push(tile);
-        if (typeof tile.status === "number") enemies.push(tile);
-      }
-    }
+  const nextToMove = extraTurn ? player : nextPlayer(player);
+  const next = enterTurn(
+    grid,
+    [...new Set([...state.pendingCapitals, ...lostCapitalPlayers])],
+    nextToMove,
+  );
+  const playableGrid = ensurePlayable(next.grid, dictionary);
+
+  const events: GameEvent[] = [
+    ...[...lostCapitalPlayers].map((loser): GameEvent => ({
+      type: "capital-captured",
+      captor: player,
+      loser,
+    })),
+    ...next.events,
+  ];
+  if (playableGrid !== next.grid) {
+    events.push({ type: "redeal", reason: "no-playable-word" });
   }
+  events.push({ type: "played", player, word });
 
-  let best: HexCoord | null = null;
-  let bestDepth = -Infinity;
-  let bestEnemyDistance = -Infinity;
-
-  for (const tile of owned) {
-    const depth = minDistance(tile.coord, notOwned);
-    const enemyDistance = minDistance(tile.coord, enemies);
-
-    if (
-      depth > bestDepth ||
-      (depth === bestDepth && enemyDistance > bestEnemyDistance)
-    ) {
-      best = tile.coord;
-      bestDepth = depth;
-      bestEnemyDistance = enemyDistance;
-    }
-  }
-
-  return best;
+  return {
+    ok: true,
+    state: {
+      ...state,
+      grid: playableGrid,
+      turn: state.turn + 1,
+      currentPlayer: nextToMove,
+      wins,
+      pendingCapitals: next.pendingCapitals,
+      firstPasser: null,
+      events: result.over ? [] : events,
+    },
+  };
 };
 
 /**
- * Gives a player a new capital on their safest tile.{@link findCapitalSite}
+ * Passes the current player's turn:
+ * 1. Picks the next player.
+ * 2. Gives that player a new capital if theirs was destroyed.
+ * 3. Redeals all letters if every player has passed in a row.
  *
- * @param grid - Current hex grid state.
- * @param player - The player who lost their capital.
- * @returns A copy of the grid with a new capital set, or the same grid if `player` lost all their tiles.
+ * @param state - The state before the pass.
+ * @param reason - Whhy the turn is passed.
+ * @param dictionary - Used to redeal letters.
+ * @returns The state after the pass.
  */
-export const reformCapital = (
-  grid: HexTileData[][],
-  player: Player,
-): HexTileData[][] => {
-  const site = findCapitalSite(grid, player);
-  if (site === null) return grid;
+const applyPass = (
+  state: GameState,
+  reason: PassReason,
+  dictionary: Dictionary,
+): GameState => {
+  const nextToMove = nextPlayer(state.currentPlayer);
+  const opener = state.firstPasser ?? state.currentPlayer;
+  const allPassed = nextToMove === opener;
+  const next = enterTurn(state.grid, state.pendingCapitals, nextToMove);
 
-  const newGrid = grid.map((column) => [...column]);
-  setTile(newGrid, site, { isCapital: true });
-  return newGrid;
+  const events: GameEvent[] = [
+    { type: reason, player: state.currentPlayer },
+    ...next.events,
+  ];
+  if (allPassed) events.push({ type: "redeal", reason: "all-passed" });
+
+  return {
+    ...state,
+    grid: allPassed ? dealNeutral(next.grid, dictionary) : next.grid,
+    turn: state.turn + 1,
+    currentPlayer: nextToMove,
+    pendingCapitals: next.pendingCapitals,
+    firstPasser: allPassed ? null : opener,
+    events,
+  };
 };
 
-const ownsAnyTile = (grid: HexTileData[][], player: Player): boolean =>
-  grid.some((column) => column.some((tile) => tile.status === player));
-
 /**
- * Decides whether a game is over. It ends when at most one player owns a tile.
+ * Applies a move for the current player.
  *
- * @param grid - Current hex grid state.
- * @returns `{ over: false} `, or `{ over: true, winner} `.
+ * It does NOT change `state`.
+ *
+ * @param state - The state before the move.
+ * @param move - What the current player does.
+ * @param dictionary - Used to check words and to deal letters.
+ * @returns The state after the move, or why the move was refused.
  */
-export const getGameResult = (grid: HexTileData[][]): GameResult => {
-  const alive = PLAYERS.filter((player) => ownsAnyTile(grid, player));
-  return alive.length > 1 ? { over: false } : { over: true, winner: alive[0] };
+export const applyMove = (
+  state: GameState,
+  move: Move,
+  dictionary: Dictionary,
+): MoveResult => {
+  if (getGameResult(state.grid).over) return refuse("game-over");
+
+  return move.type === "submit"
+    ? applySubmit(state, move.keys, dictionary)
+    : { ok: true, state: applyPass(state, move.reason, dictionary) };
 };
