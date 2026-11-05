@@ -48,3 +48,5 @@ next-env.d.ts
 
 # raw frequency list, trimmed by `npm run dictionary:trim`
 /data/dictionary/frequencies/en-full.txt
+
+.wrangler/
