@@ -9,7 +9,7 @@ import FlipOption from "@/components/FlipOption";
 import Icon from "@/components/Icon";
 import type { Mode } from "@/game/mode";
 import { useMounted } from "@/hooks/useMounted";
-import { group, robot } from "@/icons";
+import { globe, group, robot } from "@/icons";
 import { useMode } from "@/lib/settings";
 
 const START_CLASS =
@@ -21,6 +21,7 @@ const MODE_BUTTONS: {
   icon: typeof group;
   options?: ReactNode;
 }[] = [
+  { mode: "online", label: "ONLINE", icon: globe },
   {
     mode: "local",
     label: "LOCAL",
