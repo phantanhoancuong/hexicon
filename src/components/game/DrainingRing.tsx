@@ -1,15 +1,26 @@
 import { useEffect, useRef } from "react";
 
-export const RADIUS = 20;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+/** The size of the clock's drawing area, in `viewBox` units. Used by `TurnClock`. */
+export const CLOCK_SIZE = 48;
+export const CLOCK_CENTER = CLOCK_SIZE / 2;
+
+/** The radius and thickness of the ring, in `viewBox` units. */
+export const RING_RADIUS = 20;
+export const RING_STROKE_WIDTH = 4;
+
+const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 type DrainingRingProps = {
   durationSeconds: number;
+  /** How long the ring stays full before it starts to drain. */
   delayMs: number;
+  /** If the ring should be draining. */
   running: boolean;
+  /** If little time is left, the ring is drawn more stronger. */
   isLow: boolean;
 };
 
+/** The ring of the turn clock draining over the turn. */
 export default function DrainingRing({
   durationSeconds,
   delayMs,
@@ -38,11 +49,11 @@ export default function DrainingRing({
   return (
     <circle
       ref={ringRef}
-      cx="24"
-      cy="24"
-      r={RADIUS}
+      cx={CLOCK_CENTER}
+      cy={CLOCK_CENTER}
+      r={RING_RADIUS}
       fill="none"
-      strokeWidth="4"
+      strokeWidth={RING_STROKE_WIDTH}
       strokeDasharray={CIRCUMFERENCE}
       className={isLow ? "stroke-foreground" : "stroke-muted-foreground"}
     />

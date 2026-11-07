@@ -1,19 +1,32 @@
-import DrainingRing, { RADIUS } from "@/components/DrainingRing";
+import DrainingRing, {
+  CLOCK_CENTER,
+  CLOCK_SIZE,
+  RING_RADIUS,
+  RING_STROKE_WIDTH,
+} from "@/components/game/DrainingRing";
+
+/** The clock is drawn in a more noticeable way when less than this share of the full time is left. */
+const LOW_TIME_RATIO = 0.1;
 
 type TurnClockProps = {
   durationSeconds: number;
+  /** Pause before the clock starts. */
   delayMs: number;
+  /** Whole seconds left, or `null` when the clock is not running. */
   secondsLeft: number | null;
+  /** A value that changes every turn, so the ring knows when to start over. */
   resetKey: number;
 };
 
+/** A ring and a number that count down the current turn. */
 export default function TurnClock({
   durationSeconds,
   delayMs,
   secondsLeft,
   resetKey,
 }: TurnClockProps) {
-  const isLow = secondsLeft !== null && secondsLeft / durationSeconds < 0.1;
+  const isLow =
+    secondsLeft !== null && secondsLeft / durationSeconds < LOW_TIME_RATIO;
 
   return (
     <div
@@ -22,15 +35,15 @@ export default function TurnClock({
       aria-label="Time left in turn"
     >
       <svg
-        viewBox="0 0 48 48"
+        viewBox={`0 0 ${CLOCK_SIZE} ${CLOCK_SIZE}`}
         className="absolute inset-0 size-full -rotate-90"
       >
         <circle
-          cx="24"
-          cy="24"
-          r={RADIUS}
+          cx={CLOCK_CENTER}
+          cy={CLOCK_CENTER}
+          r={RING_RADIUS}
           fill="none"
-          strokeWidth="4"
+          strokeWidth={RING_STROKE_WIDTH}
           className="stroke-border"
         />
         <DrainingRing

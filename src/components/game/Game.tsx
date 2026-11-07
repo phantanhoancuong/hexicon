@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 
-import FlipPrompt from "@/components/FlipPrompt";
-import GameOverDialog from "@/components/GameOverDialog";
-import HexGrid from "@/components/HexGrid";
-import Scoreboard from "@/components/Scoreboard";
-import StatusMessage from "@/components/StatusMessage";
-import WordDisplay from "@/components/WordDisplay";
+import AutoFlipPrompt from "@/components/game/AutoFlipPrompt";
+import GameOverDialog from "@/components/game/GameOverDialog";
+import HexGrid from "@/components/game/HexGrid";
+import Scoreboard from "@/components/game/Scoreboard";
+import StatusMessage from "@/components/game/StatusMessage";
+import WordDisplay from "@/components/game/WordDisplay";
+import { Button } from "@/components/ui";
 
 import { chooseMove } from "@/game/bot";
 import { PROFILES } from "@/game/botProfiles";
@@ -199,16 +200,16 @@ export default function Game({ botPlayer }: GameProps) {
           <WordDisplay word={word} isValid={wordIsValid} />
         </div>
 
-        <button
-          className={`h-10 w-full shrink-0 rounded-md bg-accent font-semibold tracking-wide text-accent-foreground disabled:opacity-40 ${canPress ? "cursor-pointer" : "cursor-auto"}`}
+        <Button
+          className="w-full shrink-0"
           onClick={handleSubmit}
           disabled={!canPress}
         >
           SUBMIT
-        </button>
+        </Button>
       </div>
 
-      {promptOpen && <FlipPrompt onChoose={setFlip} />}
+      {promptOpen && <AutoFlipPrompt onChoose={setFlip} />}
 
       {result.over && (
         <GameOverDialog

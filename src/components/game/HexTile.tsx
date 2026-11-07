@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import Icon from "@/components/Icon";
+import { Icon } from "@/components/ui";
 
 import { crown } from "@/icons";
 

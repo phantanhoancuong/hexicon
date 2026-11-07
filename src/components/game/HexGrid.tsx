@@ -1,16 +1,19 @@
-import HexTile from "@/components/HexTile";
+import HexTile from "@/components/game/HexTile";
 
 import { coordToKey } from "@/game/hex";
 
 import {
   CAPTURABLE_CLASS,
+  SELECTED_CLASS,
+  STATUS_CLASS,
+  THREATENED_CLASS,
+} from "@/lib/tileStyles";
+
+import {
   HexCoord,
   HexTileData,
   Highlight,
   Player,
-  SELECTED_CLASS,
-  STATUS_CLASS,
-  THREATENED_CLASS,
   TileStatus,
 } from "@/types/HexTile";
 

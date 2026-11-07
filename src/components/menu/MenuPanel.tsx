@@ -3,17 +3,18 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import AlternateOption from "@/components/AlternateOption";
-import DifficultySelect from "@/components/DifficultySelect";
-import FlipOption from "@/components/FlipOption";
-import Icon from "@/components/Icon";
-import type { Mode } from "@/game/mode";
-import { useMounted } from "@/hooks/useMounted";
-import { globe, group, robot } from "@/icons";
-import { useMode } from "@/lib/settings";
+import AlternateOption from "@/components/menu/AlternateOption";
+import AutoFlipSwitch from "@/components/menu/AutoFlipSwitch";
+import DifficultySelect from "@/components/menu/DifficultySelect";
 
-const START_CLASS =
-  "flex h-12 w-full items-center justify-center rounded-md bg-accent font-semibold tracking-wide text-accent-foreground";
+import { buttonClass, Icon } from "@/components/ui";
+import { globe, group, robot } from "@/icons";
+
+import type { Mode } from "@/game/mode";
+
+import { useMounted } from "@/hooks/useMounted";
+
+import { useMode } from "@/lib/settings";
 
 const MODE_BUTTONS: {
   mode: Mode;
@@ -28,7 +29,7 @@ const MODE_BUTTONS: {
     icon: group,
     options: (
       <>
-        <FlipOption />
+        <AutoFlipSwitch />
         <AlternateOption />
       </>
     ),
@@ -99,7 +100,10 @@ export default function MenuPanel() {
         })}
       </div>
 
-      <Link href={`/play/${mode}`} className={START_CLASS}>
+      <Link
+        href={`/play/${mode}`}
+        className={buttonClass({ size: "lg", className: "w-full" })}
+      >
         START
       </Link>
     </div>

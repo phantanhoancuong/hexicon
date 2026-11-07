@@ -3,13 +3,18 @@ import { useEffect, useRef, useState } from "react";
 const DISPLAY_INTERVAL_MS = 250;
 
 type UseCountdownOptions = {
+  /** If the countdown is active */
   running: boolean;
   durationSeconds: number;
+  /** Pause before the clock starts. */
   startDelayMs: number;
+  /** A value that changes every turn, so the ring knows when to start over. */
   resetKey: number;
+  /** Called once when the time runs out. */
   onExpire: () => void;
 };
 
+/** The last time shown. */
 type Tick = {
   key: number;
   secondsLeft: number;

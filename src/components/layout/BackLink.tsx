@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import Icon from "@/components/Icon";
-
+import { Icon } from "@/components/ui";
 import { chevronLeft } from "@/icons";
 
+/** Header button linking back to the menu. Hidden on the menu. */
 export default function BackLink() {
   const pathname = usePathname();
   if (pathname === "/") return null;

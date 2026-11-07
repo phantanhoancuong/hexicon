@@ -4,7 +4,12 @@ import { usePathname } from "next/navigation";
 
 import { useFlip } from "@/lib/settings";
 
-export default function FlipToggle() {
+/**
+ * Header button for AUTO FLIP in local play.
+ *
+ * Chooses if the screen turns around, towards the player on the other side of the device on local play.
+ */
+export default function AutoFlipButton() {
   const pathname = usePathname();
   const [flip, setFlip] = useFlip();
 

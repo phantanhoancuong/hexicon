@@ -4,6 +4,13 @@ import { NOTICE_MS } from "@/game/constants";
 
 import { GameEvent } from "@/types/GameEvent";
 
+/**
+ * Holds the notices to show to players.
+ *
+ * The notices are cleared after `NOTICE_MS`.
+ *
+ * @returns The notices and a function to set notices.
+ */
 export function useNoticeEvents() {
   const [events, setEvents] = useState<GameEvent[]>([]);
 

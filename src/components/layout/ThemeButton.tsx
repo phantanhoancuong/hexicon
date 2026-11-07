@@ -1,21 +1,16 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useSyncExternalStore } from "react";
+
+import { useMounted } from "@/hooks/useMounted";
 
 const THEMES = ["system", "light", "dark"] as const;
 
-const subscribe = () => () => {};
-
-/** Header button that cycles the theme through `system`, `light` and `dark`. */
-export default function ThemeToggle() {
+/** Header button for the theme that cycles the theme through `system`, `light` and `dark`. */
+export default function ThemeButton() {
   const { theme, setTheme } = useTheme();
 
-  const mounted = useSyncExternalStore(
-    subscribe,
-    () => true,
-    () => false,
-  );
+  const mounted = useMounted();
 
   const current = THEMES.find((t) => t === theme) ?? "system";
   const next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];

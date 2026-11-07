@@ -1,18 +1,41 @@
 import PartySocket from "partysocket";
 import { useEffect, useState } from "react";
 
-import { clearSession, loadSession, saveSession } from "@/lib/onlineSession";
-import { getServerHost, isServerSecure } from "@/lib/serverConfig";
+import { getServerHost, isServerSecure } from "@/lib/online/server";
+import { clearSession, loadSession, saveSession } from "@/lib/online/session";
 import { CLOSE_REPLACED } from "@/online/closeCodes";
 import type { ClientMessage, ServerError, ServerMessage } from "@/types/Online";
 
+/** Connection status to the game room. */
 export type ConnectionStatus =
   "connecting" | "joined" | "reconnecting" | "closed";
 
+/**
+ * Latest state of the room.
+ *
+ * Includes the player's info and their opponent's info.
+ */
 export type RoomView = Extract<ServerMessage, { type: "room" }>;
 
+/** Why the player was denied from letting into a game room. */
 export type OnlineError = ServerError | "replaced";
 
+/**
+ * Connects to an online game room, joins it, and maintains it.
+ *
+ * The socket tries to reconnect by itself so each time it opens, the hook sends `join` with the generated `token` assigned to this room.
+ * so the player can reconnects as the same `Player`.
+ *
+ * The hook does not proceed when:
+ * - `status` is `closed`.
+ * - The room is full.
+ * - The player has joined from another tab.
+ *
+ * Note: The state starts over when the component that uses the hook is created again, so give that component `key={code}`.
+ *
+ * @param code - The room code, or `null` when disconnected.
+ * @returns The connection `status`, the latest `room` state, or `error` if the connection is closed.
+ */
 export const useOnlineRoom = (code: string | null) => {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [room, setRoom] = useState<RoomView | null>(null);
@@ -20,10 +43,6 @@ export const useOnlineRoom = (code: string | null) => {
 
   useEffect(() => {
     if (code === null) return;
-
-    setStatus("connecting");
-    setRoom(null);
-    setError(null);
 
     let stopped = false;
 

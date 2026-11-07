@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 
-import Badge from "@/components/Badge";
+import Badge from "@/components/ui/Badge";
 
 type SegmentedControlProps<T extends string> = {
   label: string;

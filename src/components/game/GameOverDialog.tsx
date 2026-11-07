@@ -1,6 +1,10 @@
+import { Button } from "@/components/ui";
+
 import { playerName } from "@/game/names";
 
-import { Player, PLAYER_TAG_CLASS } from "@/types/HexTile";
+import { PLAYER_TAG_CLASS } from "@/lib/tileStyles";
+
+import { Player } from "@/types/HexTile";
 
 type GameOverDialogProps = {
   winner: Player;
@@ -31,13 +35,9 @@ export default function GameOverDialog({
           </span>
           <span>wins</span>
         </p>
-        <button
-          autoFocus
-          className="cursor-pointer rounded-md bg-accent px-4 py-2 font-semibold tracking-wide text-accent-foreground"
-          onClick={resetGame}
-        >
+        <Button autoFocus onClick={resetGame}>
           PLAY AGAIN
-        </button>
+        </Button>
       </div>
     </div>
   );

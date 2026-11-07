@@ -10,6 +10,7 @@ export const useFlip = createSetting(
   (value) => value === null || typeof value === "boolean",
 );
 
+/** The bot's difficulty. */
 export const useDifficulty = createSetting<Difficulty>(
   "difficulty",
   "medium",
@@ -17,6 +18,7 @@ export const useDifficulty = createSetting<Difficulty>(
     typeof value === "string" && DIFFICULTIES.some((level) => level === value),
 );
 
+/** The selected game mode */
 export const useMode = createSetting<Mode>(
   "mode",
   "bot",
@@ -24,6 +26,7 @@ export const useMode = createSetting<Mode>(
     typeof value === "string" && MODES.some((mode) => mode === value),
 );
 
+/** If the first turn belongs to alternating players between matches. */
 export const useAlternate = createSetting<boolean>(
   "alternate",
   true,

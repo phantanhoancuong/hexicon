@@ -1,4 +1,4 @@
-import OnlineRoom from "@/components/OnlineRoom";
+import OnlineRoom from "@/components/online/OnlineRoom";
 
 export default async function OnlineRoomPage({
   params,

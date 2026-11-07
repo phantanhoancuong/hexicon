@@ -2,12 +2,14 @@
 
 import { useEffect, useRef } from "react";
 
-type FlipPromptProps = {
+import { Button } from "@/components/ui";
+
+type AutoFlipPromptProps = {
   onChoose: (flip: boolean) => void;
 };
 
 /** One time dialog that asks local players if they want the screen to flip automatically. */
-export default function FlipPrompt({ onChoose }: FlipPromptProps) {
+export default function AutoFlipPrompt({ onChoose }: AutoFlipPromptProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -29,18 +31,16 @@ export default function FlipPrompt({ onChoose }: FlipPromptProps) {
         {`Turn on AUTO FLIP to flip the screen whenever a turn passes so you don't have to pass the device around.`}
       </p>
       <div className="mt-5 flex gap-3 font-mono text-sm font-semibold tracking-wide">
-        <button
-          className="h-10 flex-1 cursor-pointer rounded-md border-2 border-border"
+        <Button
+          variant="secondary"
+          className="flex-1"
           onClick={() => onChoose(false)}
         >
           {`DON'T FLIP`}
-        </button>
-        <button
-          className="h-10 flex-1 cursor-pointer rounded-md bg-accent text-accent-foreground"
-          onClick={() => onChoose(true)}
-        >
+        </Button>
+        <Button className="flex-1" onClick={() => onChoose(true)}>
           FLIP
-        </button>
+        </Button>
       </div>
     </dialog>
   );

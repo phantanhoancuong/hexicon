@@ -1,23 +1,36 @@
 "use client";
 
 import Link from "next/link";
+
+import { Button, buttonClass } from "@/components/ui";
+
+import {
+  useOnlineRoom,
+  type ConnectionStatus,
+  type OnlineError,
+  type RoomView,
+} from "@/hooks/useOnlineRoom";
+import { normalizeRoomCode } from "@/online/roomCode";
 import { useState } from "react";
 
-import type {
-  ConnectionStatus,
-  OnlineError,
-  RoomView,
-} from "@/hooks/useOnlineRoom";
-import { useOnlineRoom } from "@/hooks/useOnlineRoom";
-import { normalizeRoomCode } from "@/online/roomCode";
+/** How long "COPIED" stays on the button, in milliseconds. */
+const COPIED_MESSAGE_MS = 2000;
 
-const ERROR_MESSAGES: Record<OnlineError, string> = {
-  "room-not-found": "There is no room with that code.",
-  "room-full": "This room already has two players.",
-  replaced: "You joined this room from another tab. Use that one.",
+/** Maps internal server error messages to readable messages for the players. */
+const ERROR_MESSAGE: Record<OnlineError, string> = {
+  "room-not-found": "There is no game room with that code.",
+  "room-full": "This game room already has two players.",
+  replaced: "You joined this game room from another tab. Use that one.",
   "invalid-message": "Something went wrong. Try refreshing the page.",
 };
 
+/**
+ * Describes what is happening in the game room.
+ *
+ * @param status - How the connection to the game room is.
+ * @param room - The latest state of the game room, `null` before receiving the processed state.
+ * @returns The text to show to the player.
+ */
 const describeRoom = (
   status: ConnectionStatus,
   room: RoomView | null,
@@ -38,7 +51,11 @@ function Problem({ message }: { message: string }) {
       </p>
       <Link
         href="/play/online"
-        className="flex h-12 w-full max-w-xs items-center justify-center rounded-md border-2 border-border font-semibold tracking-wide"
+        className={buttonClass({
+          variant: "secondary",
+          size: "lg",
+          className: "w-full max-w-xs",
+        })}
       >
         BACK
       </Link>
@@ -46,22 +63,23 @@ function Problem({ message }: { message: string }) {
   );
 }
 
+/** Screen for a online game room. */
 export default function OnlineRoom({ code }: { code: string }) {
   const normalized = normalizeRoomCode(code);
   const { status, room, error } = useOnlineRoom(normalized);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<boolean>(false);
 
   if (normalized === null)
-    return <Problem message="That is not a room code." />;
-  if (status === "closed" && error !== null) {
-    return <Problem message={ERROR_MESSAGES[error]} />;
-  }
+    return <Problem message="You've entered an invalid room code." />;
+  if (status === "closed" && error !== null)
+    return <Problem message={ERROR_MESSAGE[error]} />;
 
-  const handleCopy = async () => {
+  /** Copies the room code to the clipboard and shows "COPIED" for a moment. */
+  const handleCopy = async (): Promise<void> => {
     try {
       await navigator.clipboard.writeText(normalized);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      window.setTimeout(() => setCopied(false), COPIED_MESSAGE_MS);
     } catch {}
   };
 
@@ -72,13 +90,9 @@ export default function OnlineRoom({ code }: { code: string }) {
         <span className="text-4xl font-semibold tracking-[0.18em]">
           {normalized}
         </span>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="flex h-10 items-center justify-center rounded-md border-2 border-border px-4 text-sm font-semibold tracking-wide"
-        >
+        <Button variant="secondary" className="text-sm" onClick={handleCopy}>
           {copied ? "COPIED" : "COPY CODE"}
-        </button>
+        </Button>
       </section>
 
       <p role="status" className="text-sm text-muted-foreground">

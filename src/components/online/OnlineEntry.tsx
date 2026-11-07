@@ -1,22 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { FormEvent } from "react";
+import type { SubmitEvent } from "react";
 import { useState } from "react";
 
-import { loadSession, saveSession } from "@/lib/onlineSession";
-import { createRoom } from "@/lib/roomApi";
+import { createRoom } from "@/lib/online/server";
+import { loadSession, saveSession } from "@/lib/online/session";
 import {
   normalizeRoomCode,
   ROOM_CODE_ALPHABET,
   ROOM_CODE_LENGTH,
 } from "@/online/roomCode";
 
-const PRIMARY_CLASS =
-  "flex h-12 w-full cursor-pointer items-center justify-center rounded-md bg-accent font-semibold tracking-wide text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50";
-
-const SECONDARY_CLASS =
-  "flex h-12 w-full cursor-pointer items-center justify-center rounded-md border-2 border-border font-semibold tracking-wide disabled:cursor-not-allowed disabled:opacity-50";
+import { Button } from "@/components/ui";
 
 const SLOT_INDEXES = Array.from({ length: ROOM_CODE_LENGTH }, (_, i) => i);
 
@@ -26,6 +22,7 @@ const cleanTyped = (input: string): string =>
     .join("")
     .slice(0, ROOM_CODE_LENGTH);
 
+/** Screen for starting a game room or joining a friend's. */
 export default function OnlineEntry() {
   const router = useRouter();
   const [typed, setTyped] = useState("");
@@ -47,7 +44,7 @@ export default function OnlineEntry() {
     }
   };
 
-  const handleJoin = (event: FormEvent) => {
+  const handleJoin = (event: SubmitEvent) => {
     event.preventDefault();
 
     const code = normalizeRoomCode(typed);
@@ -76,14 +73,14 @@ export default function OnlineEntry() {
           <p className="text-sm text-muted-foreground">
             You get a code to share with a friend.
           </p>
-          <button
-            type="button"
+          <Button
+            size="lg"
+            className="w-full"
             onClick={handleCreate}
             disabled={creating}
-            className={PRIMARY_CLASS}
           >
             {creating ? "CREATING..." : "CREATE ROOM"}
-          </button>
+          </Button>
         </section>
 
         <form onSubmit={handleJoin} className="flex flex-col gap-3">
@@ -118,7 +115,6 @@ export default function OnlineEntry() {
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               onSelect={(event) => {
-                // Keep the caret at the end so it matches the highlighted slot.
                 const end = event.currentTarget.value.length;
                 event.currentTarget.setSelectionRange(end, end);
               }}
@@ -133,13 +129,15 @@ export default function OnlineEntry() {
             />
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="secondary"
+            size="lg"
+            className="w-full"
             disabled={typed.length < ROOM_CODE_LENGTH}
-            className={SECONDARY_CLASS}
           >
             JOIN
-          </button>
+          </Button>
         </form>
 
         <p id="online-message" role="alert" className="h-5 text-center text-sm">

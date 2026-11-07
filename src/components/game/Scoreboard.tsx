@@ -1,5 +1,5 @@
-import PlayerTag from "@/components/PlayerTag";
-import TurnClock from "@/components/TurnClock";
+import PlayerTag from "@/components/game/PlayerTag";
+import TurnClock from "@/components/game/TurnClock";
 
 import { TURN_PAUSE_MS, TURN_SECONDS } from "@/game/constants";
 import { Player } from "@/types/HexTile";
