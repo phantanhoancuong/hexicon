@@ -3,12 +3,8 @@
 import { useState } from "react";
 
 import AutoFlipPrompt from "@/components/game/AutoFlipPrompt";
+import GameBoard from "@/components/game/GameBoard";
 import GameOverDialog from "@/components/game/GameOverDialog";
-import HexGrid from "@/components/game/HexGrid";
-import Scoreboard from "@/components/game/Scoreboard";
-import StatusMessage from "@/components/game/StatusMessage";
-import WordDisplay from "@/components/game/WordDisplay";
-import { Button } from "@/components/ui";
 
 import { chooseMove } from "@/game/bot";
 import { PROFILES } from "@/game/botProfiles";
@@ -16,13 +12,8 @@ import { PLAYERS, TURN_PAUSE_MS, TURN_SECONDS } from "@/game/constants";
 
 import { Dictionary } from "@/game/dictionary";
 import { applyMove, createGameState, dealState, nextGame } from "@/game/game";
-import {
-  getCapturableKeys,
-  getGameResult,
-  getNeutralizedKeys,
-  isSelectable,
-} from "@/game/grid";
-import { coordToKey, getTile, keyToCoord } from "@/game/hex";
+import { getGameResult, isSelectable } from "@/game/grid";
+import { coordToKey, getTile } from "@/game/hex";
 
 import { useBotTurn } from "@/hooks/useBotTurn";
 import { useCountdown } from "@/hooks/useCountdown";
@@ -35,13 +26,13 @@ import { useAlternate, useDifficulty, useFlip } from "@/lib/settings";
 import { GameState, PassReason } from "@/types/GameState";
 import { HexCoord, Player } from "@/types/HexTile";
 
-type GameProps = {
+type LocalGameProps = {
   /** Optional bot player. */
   botPlayer?: Player;
 };
 
 /** Game state handler. */
-export default function Game({ botPlayer }: GameProps) {
+export default function LocalGame({ botPlayer }: LocalGameProps) {
   const [state, setState] = useState<GameState>(() => createGameState());
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(
     () => new Set(),
@@ -56,20 +47,8 @@ export default function Game({ botPlayer }: GameProps) {
 
   const { grid, turn, currentPlayer, wins } = state;
   const result = getGameResult(grid);
-  const capturableKeys = getCapturableKeys(grid, selectedKeys, currentPlayer);
-  const neutralizedKeys = getNeutralizedKeys(
-    grid,
-    capturableKeys,
-    currentPlayer,
-  );
-  const word = [...selectedKeys]
-    .map((key) => getTile(grid, keyToCoord(key))?.character ?? "")
-    .join("");
-  const wordIsValid = isValidWord(word);
-  const canSubmit = !result.over && wordIsValid;
   const isBotTurn =
     botPlayer === currentPlayer && status === "ready" && !result.over;
-  const canPress = canSubmit && !isBotTurn;
   const promptOpen = mounted && flip === null && botPlayer === undefined;
   const isFlipped =
     flip === true && botPlayer === undefined && currentPlayer === PLAYERS[1];
@@ -113,7 +92,7 @@ export default function Game({ botPlayer }: GameProps) {
 
   /** Plays the selected word. Does nothing if the move is refused. */
   const handleSubmit = (): void => {
-    if (!canSubmit || !dictionary) return;
+    if (result.over || !dictionary) return;
 
     const outcome = applyMove(
       state,
@@ -173,41 +152,23 @@ export default function Game({ botPlayer }: GameProps) {
   };
 
   return (
-    <div className="flex h-full w-full max-w-xl justify-center">
-      <div
-        className={`flex h-full w-full flex-col items-center justify-center gap-(--gap) transition-transform duration-700 [--gap:clamp(0.5rem,1.5dvh,1rem)] motion-reduce:transition-none ${isFlipped ? "rotate-180" : ""}`}
-      >
-        <Scoreboard
-          wins={wins}
-          currentPlayer={currentPlayer}
-          turn={turn}
-          secondsLeft={secondsLeft}
-          botPlayer={botPlayer}
-        />
-
-        <StatusMessage status={status} events={events} botPlayer={botPlayer} />
-
-        <HexGrid
-          grid={grid}
-          selectedKeys={selectedKeys}
-          capturableKeys={capturableKeys}
-          currentPlayer={currentPlayer}
-          neutralizedKeys={neutralizedKeys}
-          onSelect={handleSelect}
-        />
-
-        <div className="w-full shrink-0">
-          <WordDisplay word={word} isValid={wordIsValid} />
-        </div>
-
-        <Button
-          className="w-full shrink-0"
-          onClick={handleSubmit}
-          disabled={!canPress}
-        >
-          SUBMIT
-        </Button>
-      </div>
+    <>
+      <GameBoard
+        grid={grid}
+        selectedKeys={selectedKeys}
+        currentPlayer={currentPlayer}
+        wins={wins}
+        turn={turn}
+        secondsLeft={secondsLeft}
+        status={status}
+        events={events}
+        botPlayer={botPlayer}
+        isValidWord={isValidWord}
+        canPlay={!result.over && !isBotTurn}
+        flipped={isFlipped}
+        onSelect={handleSelect}
+        onSubmit={handleSubmit}
+      />
 
       {promptOpen && <AutoFlipPrompt onChoose={setFlip} />}
 
@@ -218,6 +179,6 @@ export default function Game({ botPlayer }: GameProps) {
           botPlayer={botPlayer}
         />
       )}
-    </div>
+    </>
   );
 }

@@ -1,1 +1,1 @@
-export { default as Game } from "@/components/game/Game";
+export { default as LocalGame } from "@/components/game/LocalGame";
