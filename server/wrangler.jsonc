@@ -7,4 +7,5 @@
     "bindings": [{ "name": "Main", "class_name": "Room" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  "rules": [{ "type": "Text", "globs": ["**/*.txt"], "fallthrough": true }],
 }
