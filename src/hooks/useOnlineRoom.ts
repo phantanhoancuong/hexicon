@@ -1,9 +1,12 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import PartySocket from "partysocket";
-import { useEffect, useState } from "react";
 
 import { getServerHost, isServerSecure } from "@/lib/online/server";
 import { clearSession, loadSession, saveSession } from "@/lib/online/session";
 import { CLOSE_REPLACED } from "@/online/closeCodes";
+
+import type { Player } from "@/types/HexTile";
 import type { ClientMessage, ServerError, ServerMessage } from "@/types/Online";
 
 /** Connection status to the game room. */
@@ -19,6 +22,8 @@ export type RoomView = Extract<ServerMessage, { type: "room" }>;
 
 /** Why the player was denied from letting into a game room. */
 export type OnlineError = ServerError | "replaced";
+
+type Controls = { send: (message: ClientMessage) => void; leave: () => void };
 
 /**
  * Connects to an online game room, joins it, and maintains it.
@@ -40,6 +45,7 @@ export const useOnlineRoom = (code: string | null) => {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [room, setRoom] = useState<RoomView | null>(null);
   const [error, setError] = useState<OnlineError | null>(null);
+  const controlsRef = useRef<Controls | null>(null);
 
   useEffect(() => {
     if (code === null) return;
@@ -61,6 +67,16 @@ export const useOnlineRoom = (code: string | null) => {
       setError(reason);
       setStatus("closed");
       socket.close();
+    };
+
+    controlsRef.current = {
+      send: sendMessage,
+      leave: () => {
+        sendMessage({ type: "leave" });
+        clearSession();
+        stopped = true;
+        socket.close();
+      },
     };
 
     socket.addEventListener("open", () => {
@@ -113,9 +129,22 @@ export const useOnlineRoom = (code: string | null) => {
 
     return () => {
       stopped = true;
+      controlsRef.current = null;
       socket.close();
     };
   }, [code]);
 
-  return { status, room, error };
+  const chooseSide = useCallback((side: Player | null) => {
+    controlsRef.current?.send({ type: "choose-side", side });
+  }, []);
+
+  const setReady = useCallback((ready: boolean) => {
+    controlsRef.current?.send({ type: "set-ready", ready });
+  }, []);
+
+  const leave = useCallback(() => {
+    controlsRef.current?.leave();
+  }, []);
+
+  return { status, room, error, chooseSide, setReady, leave };
 };

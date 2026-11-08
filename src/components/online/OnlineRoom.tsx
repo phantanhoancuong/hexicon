@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
+import SideTiles from "@/components/online/SideTiles";
 import { Button, buttonClass } from "@/components/ui";
 
+import { playerName } from "@/game/names";
 import {
   useOnlineRoom,
   type ConnectionStatus,
@@ -37,10 +40,21 @@ const describeRoom = (
 ): string => {
   if (status === "reconnecting") return "Connection lost. Reconnecting...";
   if (status !== "joined" || room === null) return "Connecting...";
-  if (room.opponent === null) return "Waiting for your friend to join";
-  return room.opponent.connected
-    ? "Your friend is here"
-    : "Your friend disconnected";
+
+  const { self, opponent } = room;
+  if (opponent === null) return "Waiting for your friend to join";
+  if (!opponent.connected) return "Your friend disconnected";
+  if (self.ready && opponent.ready) return "Both players are ready";
+  if (self.side === null) return "Pick a side";
+  if (self.side === opponent.side) {
+    const side = playerName(self.side).toUpperCase();
+    return opponent.ready
+      ? `Your friend is ready as ${side}. Pick the other side to be ready.`
+      : `You both picked ${side}. Only one of you can be ready as ${side}.`;
+  }
+  if (self.ready) return "Waiting for your friend to be ready";
+  if (opponent.ready) return "Your friend is ready";
+  return "Press READY when you are set";
 };
 
 function Problem({ message }: { message: string }) {
@@ -66,7 +80,9 @@ function Problem({ message }: { message: string }) {
 /** Screen for a online game room. */
 export default function OnlineRoom({ code }: { code: string }) {
   const normalized = normalizeRoomCode(code);
-  const { status, room, error } = useOnlineRoom(normalized);
+  const router = useRouter();
+  const { status, room, error, chooseSide, setReady, leave } =
+    useOnlineRoom(normalized);
   const [copied, setCopied] = useState<boolean>(false);
 
   if (normalized === null)
@@ -83,21 +99,64 @@ export default function OnlineRoom({ code }: { code: string }) {
     } catch {}
   };
 
+  const handleLeave = (): void => {
+    leave();
+    router.push("/play/online");
+  };
+
+  const { self, opponent } = room ?? { self: null, opponent: null };
+  const canReady =
+    self !== null &&
+    self.side !== null &&
+    !(opponent?.ready === true && opponent.side === self.side);
+
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-6 pb-12">
-      <section className="flex w-full max-w-xs flex-col items-center gap-3 rounded-md border-2 border-border p-5">
-        <span className="text-sm text-muted-foreground">Room code</span>
-        <span className="text-4xl font-semibold tracking-[0.18em]">
-          {normalized}
-        </span>
-        <Button variant="secondary" className="text-sm" onClick={handleCopy}>
-          {copied ? "COPIED" : "COPY CODE"}
+    <div className="flex h-full w-full max-w-xs flex-col items-center justify-center gap-4 pb-12">
+      <section className="flex w-full items-center justify-between gap-3 rounded-md bg-foreground/10 px-4 py-3">
+        <div className="flex flex-col">
+          <span className="text-xs text-muted-foreground">Room code</span>
+          <span className="text-2xl font-semibold tracking-[0.18em]">
+            {normalized}
+          </span>
+        </div>
+        <Button
+          variant="secondary"
+          className="px-3 text-sm"
+          onClick={handleCopy}
+        >
+          {copied ? "COPIED" : "COPY"}
         </Button>
       </section>
 
-      <p role="status" className="text-sm text-muted-foreground">
+      {self !== null && (
+        <>
+          <SideTiles self={self} opponent={opponent} onChoose={chooseSide} />
+          <Button
+            size="lg"
+            variant={self.ready ? "secondary" : "primary"}
+            className="w-full"
+            disabled={!self.ready && !canReady}
+            onClick={() => setReady(!self.ready)}
+          >
+            {self.ready ? "NOT READY" : "READY"}
+          </Button>
+        </>
+      )}
+
+      <p
+        role="status"
+        className="min-h-10 text-center text-sm text-muted-foreground"
+      >
         {describeRoom(status, room)}
       </p>
+
+      <button
+        type="button"
+        onClick={handleLeave}
+        className="cursor-pointer text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+      >
+        Leave room
+      </button>
     </div>
   );
 }

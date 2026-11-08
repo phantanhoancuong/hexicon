@@ -1,9 +1,11 @@
 import type { Connection, WSMessage } from "partyserver";
 import { getServerByName, routePartykitRequest, Server } from "partyserver";
 
+import { CLOSE_REPLACED } from "@/online/closeCodes";
 import { parseClientMessage } from "@/online/parseClientMessage";
 import { generateRoomCode } from "@/online/roomCode";
 
+import type { Player } from "@/types/HexTile";
 import type { PlayerInfo, ServerMessage } from "@/types/Online";
 
 type Env = { Main: DurableObjectNamespace<Room> };
@@ -13,6 +15,9 @@ const MAX_PLAYERS = 2;
 
 /** Storage key of the list of player tokens. Order is the order the players joined. */
 const TOKENS_KEY = "tokens";
+
+/** Storage key of the side each player has taken. */
+const SIDES_KEY = "sides";
 
 /** Storage key of the flag that says the room was made by `POST /rooms`. Joining a room without this flag is refused. */
 const CREATED_KEY = "created";
@@ -26,11 +31,14 @@ const EMPTY_ROOM_SECONDS = 600;
 /** How many codes to try when creating a room, in case a generated code is already taken. */
 const MAX_CREATE_ATTEMPTS = 5;
 
+/** The side each player has selected, by token. */
+type Sides = Record<string, Player>;
+
 /** Lets the website call the server. */
 const CORS_HEADERS = { "Access-Control-Allow-Origin": "*" };
 
 /** What is kept on each connection to survive the room going to sleep. */
-type ConnectionState = { token: string };
+type ConnectionState = { token: string; ready: boolean };
 
 /** Sends a message to one connection. */
 const send = (connection: Connection, message: ServerMessage) =>
@@ -45,6 +53,12 @@ const send = (connection: Connection, message: ServerMessage) =>
 const tokenOf = (connection: Connection): string | null => {
   const state = connection.state as Partial<ConnectionState> | null;
   return state?.token ?? null;
+};
+
+/** If the player on a connection is ready. */
+const isReady = (connection: Connection): boolean => {
+  const state = connection.state as Partial<ConnectionState> | null;
+  return state?.ready === true;
 };
 
 /**
@@ -88,7 +102,20 @@ export class Room extends Server<Env> {
       return;
     }
 
-    if (parsed.type === "join") await this.join(connection, parsed.token);
+    switch (parsed.type) {
+      case "join":
+        await this.join(connection, parsed.token);
+        return;
+      case "choose-side":
+        await this.chooseSide(connection, parsed.side);
+        return;
+      case "set-ready":
+        await this.setReady(connection, parsed.ready);
+        return;
+      case "leave":
+        await this.leave(connection);
+        return;
+    }
   }
 
   /** Tells the other player that someone left, and starts the cleanup timer if the room is now empty. */
@@ -142,31 +169,124 @@ export class Room extends Server<Env> {
     }
 
     for (const other of this.getConnections()) {
-      if (other.id !== connection.id && tokenOf(other) === own)
-        other.close(4000, "replaced");
+      if (other.id !== connection.id && tokenOf(other) === own) {
+        other.setState({ token: own, ready: false } satisfies ConnectionState);
+        other.close(CLOSE_REPLACED, "replaced");
+      }
     }
 
     await this.ctx.storage.deleteAlarm();
 
-    connection.setState({ token: own } satisfies ConnectionState);
+    connection.setState({ token: own, ready: false } satisfies ConnectionState);
     send(connection, { type: "welcome", token: own });
     await this.broadcastRoom();
   }
 
   /**
-   * Sends all joined player the current statae of the room.
+   * Lets a player selects, or unselects a side.
+   *
+   * Both players can select the same side but they will be refused if they set `ready` with the same side selected.
+   *
+   * @param connection - The connection that sent `choose-side`.
+   * @param side - The side to select, or `null` to unselect.
+   */
+  private async chooseSide(connection: Connection, side: Player | null) {
+    const own = tokenOf(connection);
+    if (own === null) {
+      send(connection, { type: "error", reason: "invalid-message" });
+      return;
+    }
+
+    if (!isReady(connection)) {
+      const sides = await this.getSides();
+      if (side === null) delete sides[own];
+      else sides[own] = side;
+      await this.ctx.storage.put(SIDES_KEY, sides);
+    }
+
+    await this.broadcastRoom();
+  }
+
+  /**
+   * Sets whether a player is ready to start.
+   *
+   * Becoming ready is refused if the player has not selected a side, or if the other player is already ready on the same side.
+   *
+   * @param connection - The connection that sent `set-ready`.
+   * @param ready - `true` to become ready, `false` to stop being ready.
+   */
+  private async setReady(connection: Connection, ready: boolean) {
+    const own = tokenOf(connection);
+    if (own === null) {
+      send(connection, { type: "error", reason: "invalid-message" });
+      return;
+    }
+
+    const sides = await this.getSides();
+    const ownSide = sides[own];
+    const sideTaken = Array.from(this.getConnections()).some((other) => {
+      const token = tokenOf(other);
+      return (
+        token !== null &&
+        token !== own &&
+        isReady(other) &&
+        sides[token] === ownSide
+      );
+    });
+
+    if (!ready || (ownSide !== undefined && !sideTaken))
+      connection.setState({ token: own, ready } satisfies ConnectionState);
+
+    await this.broadcastRoom();
+  }
+
+  /**
+   * Removes a player from the room for good, sets their seat, side and token available.
+   *
+   * @param connection - The connection that sent `leave`.
+   */
+  private async leave(connection: Connection) {
+    const own = tokenOf(connection);
+    if (own === null) {
+      send(connection, { type: "error", reason: "invalid-message" });
+      return;
+    }
+
+    const tokens = (await this.getTokens()).filter((token) => token !== own);
+    await this.ctx.storage.put(TOKENS_KEY, tokens);
+
+    const sides = await this.getSides();
+    delete sides[own];
+    await this.ctx.storage.put(SIDES_KEY, sides);
+
+    connection.setState(null);
+    await this.broadcastRoom();
+  }
+
+  /**
+   * Sends all joined player the current state of the room.
    *
    * @param closing - A connection that is closing. It is not counted as connected and doesn't get notified of the room state.
    */
   private async broadcastRoom(closing?: Connection) {
     const tokens = await this.getTokens();
+    const sides = await this.getSides();
     const connected = new Set<string>();
+    const ready = new Set<string>();
 
     for (const connection of this.getConnections()) {
       if (connection.id === closing?.id) continue;
       const token = tokenOf(connection);
-      if (token !== null) connected.add(token);
+      if (token === null) continue;
+      connected.add(token);
+      if (isReady(connection)) ready.add(token);
     }
+
+    const infoOf = (token: string): PlayerInfo => ({
+      connected: connected.has(token),
+      side: sides[token] ?? null,
+      ready: ready.has(token),
+    });
 
     for (const connection of this.getConnections()) {
       if (connection.id === closing?.id) continue;
@@ -174,12 +294,9 @@ export class Room extends Server<Env> {
       if (own === null) continue;
 
       const otherToken = tokens.find((token) => token !== own);
-      const opponent: PlayerInfo | null =
-        otherToken === undefined
-          ? null
-          : { connected: connected.has(otherToken) };
+      const opponent = otherToken === undefined ? null : infoOf(otherToken);
 
-      send(connection, { type: "room", self: { connected: true }, opponent });
+      send(connection, { type: "room", self: infoOf(own), opponent });
     }
   }
 
@@ -193,9 +310,14 @@ export class Room extends Server<Env> {
     return (await this.ctx.storage.get<boolean>(CREATED_KEY)) === true;
   }
 
-  /** THe tokens of the players in the room, in the order they joined. */
+  /** The tokens of the players in the room, in the order they joined. */
   private async getTokens(): Promise<string[]> {
     return (await this.ctx.storage.get<string[]>(TOKENS_KEY)) ?? [];
+  }
+
+  /** The side each player has taken, by token. */
+  private async getSides(): Promise<Sides> {
+    return (await this.ctx.storage.get<Sides>(SIDES_KEY)) ?? {};
   }
 }
 
@@ -203,7 +325,7 @@ export class Room extends Server<Env> {
  * Makes a new game room with a generated random code.
  *
  * @param env - The worker's bindings.
- * @returns The new code as `{ code }`, or `503` if every attempt was not successul.
+ * @returns The new code as `{ code }`, or `503` if every attempt was not successful.
  */
 const createRoom = async (env: Env): Promise<Response> => {
   for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt++) {

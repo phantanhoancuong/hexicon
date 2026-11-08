@@ -1,3 +1,4 @@
+import { Player } from "@/types/HexTile";
 import { ClientMessage } from "@/types/Online";
 
 /** Longest token accepted. */
@@ -6,6 +7,9 @@ const MAX_TOKEN_LENGTH = 64;
 /** If a value is a plain object (not `null` and not an array). */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** If a value is a valid side. */
+const isSide = (value: unknown): value is Player => value === 1 || value === 2;
 
 /**
  * Reads a message from a client and validates.
@@ -36,6 +40,18 @@ export const parseClientMessage = (raw: string): ClientMessage | null => {
       }
       return null;
     }
+    case "choose-side": {
+      const { side } = data;
+      if (side === null || isSide(side)) return { type: "choose-side", side };
+      return null;
+    }
+    case "set-ready": {
+      const { ready } = data;
+      if (typeof ready === "boolean") return { type: "set-ready", ready };
+      return null;
+    }
+    case "leave":
+      return { type: "leave" };
     default:
       return null;
   }
