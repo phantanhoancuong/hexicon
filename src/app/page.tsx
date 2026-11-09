@@ -1,5 +1,6 @@
-import MenuPanel from "@/components/MenuPanel";
+import { MenuPanel } from "@/components/menu";
 
+/** Home page, with the game menu. */
 export default function Home() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-12">

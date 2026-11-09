@@ -1,5 +1,5 @@
-import Game from "@/components/Game";
+import { LocalGame } from "@/components/game";
 
 export default function BotPage() {
-  return <Game botPlayer={2} />;
+  return <LocalGame botPlayer={2} />;
 }

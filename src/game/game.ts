@@ -168,7 +168,7 @@ const applySubmit = (
   if (playableGrid !== next.grid) {
     events.push({ type: "redeal", reason: "no-playable-word" });
   }
-  events.push({ type: "played", player, word });
+  events.push({ type: "played", player, word, keys });
 
   return {
     ok: true,

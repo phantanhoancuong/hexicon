@@ -1,10 +1,19 @@
-import { playerName } from "@/game/names";
+import {
+  isYou,
+  Perspective,
+  playerName,
+  playerNameMidSentence,
+} from "@/game/names";
 
 import { GameEvent } from "@/types/GameEvent";
 import { Player } from "@/types/HexTile";
 
-const describeEvent = (event: GameEvent, botPlayer?: Player): string => {
-  const name = (player: Player): string => playerName(player, botPlayer);
+const describeEvent = (event: GameEvent, perspective?: Perspective): string => {
+  const name = (player: Player): string => playerName(player, perspective);
+  const nameMid = (player: Player): string =>
+    playerNameMidSentence(player, perspective);
+  const verb = (player: Player, you: string, other: string): string =>
+    isYou(player, perspective) ? you : other;
 
   switch (event.type) {
     case "timeout":
@@ -14,9 +23,9 @@ const describeEvent = (event: GameEvent, botPlayer?: Player): string => {
     case "played":
       return `${name(event.player)} played ${event.word}`;
     case "capital-captured":
-      return `Capital captured, ${name(event.captor)} goes again`;
+      return `Capital captured, ${nameMid(event.captor)} ${verb(event.captor, "go", "goes")} again`;
     case "capital-reformed":
-      return `${name(event.player)} gets a new capital`;
+      return `${name(event.player)} ${verb(event.player, "get", "gets")} a new capital`;
     case "redeal":
       return event.reason === "all-passed"
         ? "Everyone passed, new letters"
@@ -49,11 +58,11 @@ const PRIORITY: GameEvent["type"][] = [
  */
 export const describeEvents = (
   events: GameEvent[],
-  botPlayer?: Player,
+  perspective?: Perspective,
 ): string => {
   for (const type of PRIORITY) {
     const event = events.find((e) => e.type === type);
-    if (event) return describeEvent(event, botPlayer);
+    if (event) return describeEvent(event, perspective);
   }
   return "";
 };

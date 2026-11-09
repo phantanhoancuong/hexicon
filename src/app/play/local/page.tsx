@@ -1,5 +1,5 @@
-import Game from "@/components/Game";
+import { LocalGame } from "@/components/game";
 
 export default function LocalPage() {
-  return <Game />;
+  return <LocalGame />;
 }

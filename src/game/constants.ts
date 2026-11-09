@@ -54,16 +54,21 @@ export const LETTER_POOL = Object.entries(LETTER_COUNTS)
   .map(([letter, count]) => letter.repeat(count))
   .join("");
 
+/** How long a player has for a turn. */
 export const TURN_SECONDS = 60;
 
+/** How long a notice stays on screen. */
 export const NOTICE_MS = 4000;
 
+/** Pause at the start of a turn before the turn clock starts. */
 export const TURN_PAUSE_MS = 2000;
 
+/** The bot thinks for a random time between `BOT_THINK_MIN_MS` and `BOT_THINK_MAX_MS` before it moves. */
 export const BOT_THINK_MIN_MS = 2000;
-
 export const BOT_THINK_MAX_MS = 10000;
 
+/** The time between the bot selecting one tile and next. */
 export const BOT_TILE_MS = 450;
 
+/** How long the bot pauses on its finished word before submitting it. */
 export const BOT_SUBMIT_MS = 2000;
