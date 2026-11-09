@@ -1,7 +1,7 @@
 import { describeEvents } from "@/game/events";
+import { Perspective } from "@/game/names";
 
 import { GameEvent } from "@/types/GameEvent";
-import { Player } from "@/types/HexTile";
 
 const STATUS_MESSAGE = {
   loading: "Loading word list...",
@@ -12,17 +12,16 @@ const STATUS_MESSAGE = {
 type StatusMessageProps = {
   status: keyof typeof STATUS_MESSAGE;
   events: GameEvent[];
-  /** Optional player the bot controls. */
-  botPlayer?: Player;
+  perspective?: Perspective;
 };
 
 export default function StatusMessage({
   status,
   events,
-  botPlayer,
+  perspective,
 }: StatusMessageProps) {
   const statusMessage = STATUS_MESSAGE[status];
-  const message = statusMessage || describeEvents(events, botPlayer);
+  const message = statusMessage || describeEvents(events, perspective);
 
   return (
     <div className="relative flex h-8 w-full shrink-0 items-center justify-center">

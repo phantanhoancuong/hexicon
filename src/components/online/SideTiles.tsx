@@ -33,7 +33,7 @@ export default function SideTiles({
         const isOwn = self.side === side;
         const holders = [
           { name: "You", info: self },
-          { name: "Your friend", info: opponent },
+          { name: "Opponent", info: opponent },
         ].filter(
           (holder): holder is { name: string; info: PlayerInfo } =>
             holder.info !== null && holder.info.side === side,

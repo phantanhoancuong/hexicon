@@ -1,4 +1,4 @@
-import { playerName } from "@/game/names";
+import { Perspective, playerName } from "@/game/names";
 
 import { PLAYER_TAG_CLASS } from "@/lib/tileStyles";
 
@@ -8,8 +8,7 @@ type PlayerTagProps = {
   player: Player;
   isActive: boolean;
   wins: number;
-  /** Optional player the bot controls. */
-  botPlayer?: Player;
+  perspective?: Perspective;
 };
 
 /** A player's name and win count. */
@@ -17,7 +16,7 @@ export default function PlayerTag({
   player,
   isActive,
   wins,
-  botPlayer,
+  perspective,
 }: PlayerTagProps) {
   const winsLabel = `${wins} ${wins === 1 ? "win" : "wins"}`;
 
@@ -30,7 +29,7 @@ export default function PlayerTag({
         <span
           className={`text-lg font-semibold transition-colors ${isActive ? "text-foreground" : "text-muted-foreground"}`}
         >
-          {playerName(player, botPlayer)}
+          {playerName(player, perspective)}
         </span>
         <span className="text-sm text-muted-foreground">{winsLabel}</span>
       </div>

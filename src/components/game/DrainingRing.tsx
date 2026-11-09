@@ -16,6 +16,7 @@ type DrainingRingProps = {
   delayMs: number;
   /** If the ring should be draining. */
   running: boolean;
+  secondsLeft: number | null;
   /** If little time is left, the ring is drawn more stronger. */
   isLow: boolean;
 };
@@ -25,19 +26,29 @@ export default function DrainingRing({
   durationSeconds,
   delayMs,
   running,
+  secondsLeft,
   isLow,
 }: DrainingRingProps) {
   const ringRef = useRef<SVGCircleElement>(null);
+  const secondsLeftRef = useRef(secondsLeft);
+
+  useEffect(() => {
+    secondsLeftRef.current = secondsLeft;
+  });
 
   useEffect(() => {
     const ring = ringRef.current;
     if (!ring || !running) return;
 
+    const secondsUsed =
+      durationSeconds - (secondsLeftRef.current ?? durationSeconds);
+    const delay = secondsUsed > 0 ? -secondsUsed * 1000 : delayMs;
+
     const animation = ring.animate(
       [{ strokeDashoffset: 0 }, { strokeDashoffset: CIRCUMFERENCE }],
       {
         duration: durationSeconds * 1000,
-        delay: delayMs,
+        delay,
         easing: "linear",
         fill: "both",
       },

@@ -33,7 +33,8 @@ export type ClientMessage =
    *
    * `keys` are the keys of the tiles, in word order.
    */
-  | { type: "submit"; keys: string[] };
+  | { type: "submit"; keys: string[] }
+  | { type: "select"; keys: string[] };
 
 export type ServerError =
   /** `join` a game room that hasn't been created. */
@@ -61,14 +62,11 @@ export type ServerMessage =
       opponent: PlayerInfo | null;
       inGame: boolean;
     }
-  /**
-   * Current state of the game, sent when:
-   * - A game starts.
-   * - After a move.
-   * - A player joins or comes back during a game.
-   *
-   * `you` is the side this player plays.
-   * `turnEndsInMs` is how long until the current turn runs out, or `null` when the game is over.
-   */
-  | { type: "game"; state: GameState; you: Player; turnEndsInMs: number | null }
+  | {
+      type: "game";
+      state: GameState;
+      you: Player;
+      turnEndsInMs: number | null;
+    }
+  | { type: "selection"; keys: string[] }
   | { type: "error"; reason: ServerError };

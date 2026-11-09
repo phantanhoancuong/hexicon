@@ -1,12 +1,13 @@
 import { PLAYERS } from "@/game/constants";
 import type { Dictionary } from "@/game/dictionary";
 import { applyMove, createGameState, dealState, nextGame } from "@/game/game";
-import { getGameResult } from "@/game/grid";
+import { getGameResult, isSelectable } from "@/game/grid";
+import { getTile, keyToCoord } from "@/game/hex";
 
 import type { GameState, Move } from "@/types/GameState";
 
 import { TURN_MS } from "@server/constants";
-import type { Sides } from "@server/room/lobby";
+import type { Sides } from "./lobby";
 
 /** The game of a room, as it is kept in storage. */
 export type StoredGame = {
@@ -119,3 +120,14 @@ export const msUntilTurnEnds = (
   now: number,
 ): number | null =>
   game.turnEndsAt === null ? null : Math.max(0, game.turnEndsAt - now);
+
+export const selectableKeys = (game: StoredGame, keys: string[]): string[] => {
+  const seen = new Set<string>();
+  return keys.filter((key) => {
+    if (seen.has(key)) return false;
+    const tile = getTile(game.state.grid, keyToCoord(key));
+    if (!tile || !isSelectable(tile)) return false;
+    seen.add(key);
+    return true;
+  });
+};

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import OnlineGame from "@/components/game/OnlineGame";
 import SideTiles from "@/components/online/SideTiles";
 import { Button, buttonClass } from "@/components/ui";
 
@@ -42,18 +43,18 @@ const describeRoom = (
   if (status !== "joined" || room === null) return "Connecting...";
 
   const { self, opponent } = room;
-  if (opponent === null) return "Waiting for your friend to join";
-  if (!opponent.connected) return "Your friend disconnected";
+  if (opponent === null) return "Waiting for your opponent to join";
+  if (!opponent.connected) return "Your opponent disconnected";
   if (self.ready && opponent.ready) return "Both players are ready";
   if (self.side === null) return "Pick a side";
   if (self.side === opponent.side) {
     const side = playerName(self.side).toUpperCase();
     return opponent.ready
-      ? `Your friend is ready as ${side}. Pick the other side to be ready.`
+      ? `Your opponent is ready as ${side}. Pick the other side to be ready.`
       : `You both picked ${side}. Only one of you can be ready as ${side}.`;
   }
-  if (self.ready) return "Waiting for your friend to be ready";
-  if (opponent.ready) return "Your friend is ready";
+  if (self.ready) return "Waiting for your opponent to be ready";
+  if (opponent.ready) return "Your opponent is ready";
   return "Press READY when you are set";
 };
 
@@ -81,8 +82,18 @@ function Problem({ message }: { message: string }) {
 export default function OnlineRoom({ code }: { code: string }) {
   const normalized = normalizeRoomCode(code);
   const router = useRouter();
-  const { status, room, error, chooseSide, setReady, leave } =
-    useOnlineRoom(normalized);
+  const {
+    status,
+    room,
+    game,
+    opponentSelection,
+    error,
+    chooseSide,
+    setReady,
+    submit,
+    select,
+    leave,
+  } = useOnlineRoom(normalized);
   const [copied, setCopied] = useState<boolean>(false);
 
   if (normalized === null)
@@ -103,6 +114,20 @@ export default function OnlineRoom({ code }: { code: string }) {
     leave();
     router.push("/play/online");
   };
+
+  if (room?.inGame === true && game !== null)
+    return (
+      <OnlineGame
+        game={game}
+        room={room}
+        opponentSelection={opponentSelection}
+        connected={status === "joined"}
+        onSubmit={submit}
+        onSelectionChange={select}
+        onPlayAgain={() => setReady(true)}
+        onLeave={handleLeave}
+      />
+    );
 
   const { self, opponent } = room ?? { self: null, opponent: null };
   const canReady =

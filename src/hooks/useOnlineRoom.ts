@@ -6,6 +6,7 @@ import { getServerHost, isServerSecure } from "@/lib/online/server";
 import { clearSession, loadSession, saveSession } from "@/lib/online/session";
 import { CLOSE_REPLACED } from "@/online/closeCodes";
 
+import type { GameState } from "@/types/GameState";
 import type { Player } from "@/types/HexTile";
 import type { ClientMessage, ServerError, ServerMessage } from "@/types/Online";
 
@@ -19,6 +20,12 @@ export type ConnectionStatus =
  * Includes the player's info and their opponent's info.
  */
 export type RoomView = Extract<ServerMessage, { type: "room" }>;
+
+export type GameView = {
+  state: GameState;
+  you: Player;
+  turnEndsAt: number | null;
+};
 
 /** Why the player was denied from letting into a game room. */
 export type OnlineError = ServerError | "replaced";
@@ -44,6 +51,8 @@ type Controls = { send: (message: ClientMessage) => void; leave: () => void };
 export const useOnlineRoom = (code: string | null) => {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [room, setRoom] = useState<RoomView | null>(null);
+  const [game, setGame] = useState<GameView | null>(null);
+  const [opponentSelection, setOpponentSelection] = useState<string[]>([]);
   const [error, setError] = useState<OnlineError | null>(null);
   const controlsRef = useRef<Controls | null>(null);
 
@@ -103,6 +112,21 @@ export const useOnlineRoom = (code: string | null) => {
           return;
         case "room":
           setRoom(message);
+          if (!message.inGame) setGame(null);
+          return;
+        case "selection":
+          setOpponentSelection(message.keys);
+          return;
+        case "game":
+          setOpponentSelection((prev) => (prev.length === 0 ? prev : []));
+          setGame({
+            state: message.state,
+            you: message.you,
+            turnEndsAt:
+              message.turnEndsInMs === null
+                ? null
+                : Date.now() + message.turnEndsInMs,
+          });
           return;
         case "error":
           if (
@@ -142,9 +166,28 @@ export const useOnlineRoom = (code: string | null) => {
     controlsRef.current?.send({ type: "set-ready", ready });
   }, []);
 
+  const submit = useCallback((keys: string[]) => {
+    controlsRef.current?.send({ type: "submit", keys });
+  }, []);
+
+  const select = useCallback((keys: string[]) => {
+    controlsRef.current?.send({ type: "select", keys });
+  }, []);
+
   const leave = useCallback(() => {
     controlsRef.current?.leave();
   }, []);
 
-  return { status, room, error, chooseSide, setReady, leave };
+  return {
+    status,
+    room,
+    game,
+    opponentSelection,
+    error,
+    chooseSide,
+    setReady,
+    submit,
+    select,
+    leave,
+  };
 };

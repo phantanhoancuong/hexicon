@@ -2,6 +2,8 @@ import PlayerTag from "@/components/game/PlayerTag";
 import TurnClock from "@/components/game/TurnClock";
 
 import { TURN_PAUSE_MS, TURN_SECONDS } from "@/game/constants";
+import { Perspective } from "@/game/names";
+
 import { Player } from "@/types/HexTile";
 
 type ScoreboardProps = {
@@ -9,8 +11,7 @@ type ScoreboardProps = {
   currentPlayer: Player;
   turn: number;
   secondsLeft: number | null;
-  /** Optional player the bot controls. */
-  botPlayer?: Player;
+  perspective?: Perspective;
 };
 
 /** Shows each player's tag and win count, the turn number and the current word. */
@@ -19,7 +20,7 @@ export default function Scoreboard({
   currentPlayer,
   turn,
   secondsLeft,
-  botPlayer,
+  perspective,
 }: ScoreboardProps) {
   return (
     <div className="flex w-full flex-col gap-1">
@@ -28,7 +29,7 @@ export default function Scoreboard({
           player={1}
           wins={wins[1]}
           isActive={currentPlayer === 1}
-          botPlayer={botPlayer}
+          perspective={perspective}
         />
         <TurnClock
           durationSeconds={TURN_SECONDS}
@@ -40,7 +41,7 @@ export default function Scoreboard({
           player={2}
           wins={wins[2]}
           isActive={currentPlayer === 2}
-          botPlayer={botPlayer}
+          perspective={perspective}
         />
       </div>
       <div className="flex h-5 items-center justify-center text-sm text-muted-foreground">

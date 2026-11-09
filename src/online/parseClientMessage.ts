@@ -69,6 +69,11 @@ export const parseClientMessage = (raw: string): ClientMessage | null => {
       if (isKeyList(keys)) return { type: "submit", keys };
       return null;
     }
+    case "select": {
+      const { keys } = data;
+      if (isKeyList(keys)) return { type: "select", keys };
+      return null;
+    }
     default:
       return null;
   }

@@ -51,6 +51,7 @@ export default function TurnClock({
           durationSeconds={durationSeconds}
           delayMs={delayMs}
           running={secondsLeft !== null}
+          secondsLeft={secondsLeft}
           isLow={isLow}
         />
       </svg>

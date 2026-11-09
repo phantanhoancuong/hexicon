@@ -5,6 +5,7 @@ import { useState } from "react";
 import AutoFlipPrompt from "@/components/game/AutoFlipPrompt";
 import GameBoard from "@/components/game/GameBoard";
 import GameOverDialog from "@/components/game/GameOverDialog";
+import { Button } from "@/components/ui";
 
 import { chooseMove } from "@/game/bot";
 import { PROFILES } from "@/game/botProfiles";
@@ -14,6 +15,7 @@ import { Dictionary } from "@/game/dictionary";
 import { applyMove, createGameState, dealState, nextGame } from "@/game/game";
 import { getGameResult, isSelectable } from "@/game/grid";
 import { coordToKey, getTile } from "@/game/hex";
+import { LOCAL, Perspective } from "@/game/names";
 
 import { useBotTurn } from "@/hooks/useBotTurn";
 import { useCountdown } from "@/hooks/useCountdown";
@@ -47,6 +49,8 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
 
   const { grid, turn, currentPlayer, wins } = state;
   const result = getGameResult(grid);
+  const perspective: Perspective =
+    botPlayer === undefined ? LOCAL : { kind: "bot", bot: botPlayer };
   const isBotTurn =
     botPlayer === currentPlayer && status === "ready" && !result.over;
   const promptOpen = mounted && flip === null && botPlayer === undefined;
@@ -162,7 +166,7 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
         secondsLeft={secondsLeft}
         status={status}
         events={events}
-        botPlayer={botPlayer}
+        perspective={perspective}
         isValidWord={isValidWord}
         canPlay={!result.over && !isBotTurn}
         flipped={isFlipped}
@@ -173,11 +177,11 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
       {promptOpen && <AutoFlipPrompt onChoose={setFlip} />}
 
       {result.over && (
-        <GameOverDialog
-          winner={result.winner}
-          resetGame={resetGame}
-          botPlayer={botPlayer}
-        />
+        <GameOverDialog winner={result.winner} perspective={perspective}>
+          <Button autoFocus onClick={resetGame}>
+            PLAY AGAIN
+          </Button>
+        </GameOverDialog>
       )}
     </>
   );

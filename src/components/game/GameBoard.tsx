@@ -9,8 +9,15 @@ import { Button } from "@/components/ui";
 import { getCapturableKeys, getNeutralizedKeys } from "@/game/grid";
 import { getTile, keyToCoord } from "@/game/hex";
 
+import { Perspective } from "@/game/names";
 import { GameEvent } from "@/types/GameEvent";
 import { HexCoord, HexTileData, Player } from "@/types/HexTile";
+
+export type PlayedWord = {
+  player: Player;
+  word: string;
+  keys: string[];
+};
 
 type GameBoardProps = {
   grid: HexTileData[][];
@@ -24,10 +31,10 @@ type GameBoardProps = {
   status: ComponentProps<typeof StatusMessage>["status"];
   /** Notices to show in the status line. */
   events: GameEvent[];
-  /** Optional player the bot controls. */
-  botPlayer?: Player;
+  perspective?: Perspective;
   /** If a word is in the dictionary. */
   isValidWord: (word: string) => boolean;
+  played?: PlayedWord;
   /** If the viewer can play now. */
   canPlay: boolean;
   /** Turns the board upside down. */
@@ -53,23 +60,36 @@ export default function GameBoard({
   secondsLeft,
   status,
   events,
-  botPlayer,
+  perspective,
   isValidWord,
+  played,
   canPlay,
   flipped,
   onSelect,
   onSubmit,
 }: GameBoardProps) {
-  const capturableKeys = getCapturableKeys(grid, selectedKeys, currentPlayer);
-  const neutralizedKeys = getNeutralizedKeys(
-    grid,
-    capturableKeys,
-    currentPlayer,
-  );
-  const word = [...selectedKeys]
+  const showPlayed = played !== undefined && selectedKeys.size === 0;
+
+  const shownKeys = showPlayed ? new Set(played.keys) : selectedKeys;
+  const shownPlayer = showPlayed ? played.player : currentPlayer;
+
+  const capturableKeys = showPlayed
+    ? new Set(
+        played.keys.filter(
+          (key) => getTile(grid, keyToCoord(key))?.status === played.player,
+        ),
+      )
+    : getCapturableKeys(grid, selectedKeys, currentPlayer);
+  const neutralizedKeys = showPlayed
+    ? new Set<string>()
+    : getNeutralizedKeys(grid, capturableKeys, currentPlayer);
+
+  const selectedWord = [...selectedKeys]
     .map((key) => getTile(grid, keyToCoord(key))?.character ?? "")
     .join("");
-  const wordIsValid = isValidWord(word);
+
+  const selectedIsValid = isValidWord(selectedWord);
+  const word = showPlayed ? played.word : selectedWord;
 
   return (
     <div className="flex h-full w-full max-w-xl justify-center">
@@ -81,28 +101,32 @@ export default function GameBoard({
           currentPlayer={currentPlayer}
           turn={turn}
           secondsLeft={secondsLeft}
-          botPlayer={botPlayer}
+          perspective={perspective}
         />
 
-        <StatusMessage status={status} events={events} botPlayer={botPlayer} />
+        <StatusMessage
+          status={status}
+          events={events}
+          perspective={perspective}
+        />
 
         <HexGrid
           grid={grid}
-          selectedKeys={selectedKeys}
+          selectedKeys={shownKeys}
           capturableKeys={capturableKeys}
-          currentPlayer={currentPlayer}
+          currentPlayer={shownPlayer}
           neutralizedKeys={neutralizedKeys}
           onSelect={onSelect}
         />
 
         <div className="w-full shrink-0">
-          <WordDisplay word={word} isValid={wordIsValid} />
+          <WordDisplay word={word} isValid={showPlayed || selectedIsValid} />
         </div>
 
         <Button
           className="w-full shrink-0"
           onClick={onSubmit}
-          disabled={!canPlay || !wordIsValid}
+          disabled={!canPlay || !selectedIsValid}
         >
           SUBMIT
         </Button>

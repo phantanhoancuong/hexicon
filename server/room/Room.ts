@@ -20,17 +20,18 @@ import {
   TURN_MS,
 } from "@server/constants";
 import { getDictionary } from "@server/dictionary";
-import type { Sides } from "@server/room/lobby";
-import { canBeReady, everyoneReady } from "@server/room/lobby";
-import type { StoredGame } from "@server/room/turn";
+import type { Sides } from "./lobby";
+import { canBeReady, everyoneReady } from "./lobby";
+import type { StoredGame } from "./turn";
 import {
   expireTurn,
   isRunning,
   isTurnOf,
   msUntilTurnEnds,
   playMove,
+  selectableKeys,
   startGame,
-} from "@server/room/turn";
+} from "./turn";
 
 export type Env = { Main: DurableObjectNamespace<Room> };
 
@@ -90,6 +91,9 @@ export class Room extends Server<Env> {
         return;
       case "submit":
         await this.submit(connection, parsed.keys);
+        return;
+      case "select":
+        await this.select(connection, parsed.keys);
         return;
     }
   }
@@ -308,6 +312,24 @@ export class Room extends Server<Env> {
       await this.broadcastGame();
     } else {
       this.sendGame(connection, game, own, sides);
+    }
+  }
+
+  private async select(connection: Connection, keys: string[]) {
+    const own = tokenOf(connection);
+    if (own === null) {
+      send(connection, { type: "error", reason: "invalid-message" });
+      return;
+    }
+
+    const game = await this.getGame();
+    if (game === null || !isTurnOf(game, await this.getSides(), own)) return;
+
+    const selection = selectableKeys(game, keys);
+    for (const other of this.getConnections()) {
+      const token = tokenOf(other);
+      if (token !== null && token !== own)
+        send(other, { type: "selection", keys: selection });
     }
   }
 
