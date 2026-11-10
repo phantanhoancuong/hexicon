@@ -21,11 +21,18 @@ export type ClientMessage =
   | {
       type: "join";
       token: string | null;
+      alternate?: boolean;
     }
   /** The player selects a side, or unselects a side (`null`). */
   | { type: "choose-side"; side: Player | null }
   /** The player is marked to be ready to play. */
   | { type: "set-ready"; ready: boolean }
+  /**
+   * The player sets whether the player who goes first alternates between matches.
+   *
+   * This setting is applied to the entire room.
+   */
+  | { type: "set-alternate"; alternate: boolean }
   /** The player leaves the room for good. */
   | { type: "leave" }
   /**
@@ -55,18 +62,25 @@ export type ServerMessage =
   | { type: "welcome"; token: string }
   /**
    * Current state of the room, sent when a player joins, disconnects, or comes back to the room.
+   *
+   * `inGame` is `true` when a game is being played.
+   *
+   * `alternate` is `true` if the player who goes first alternates between matches. This setting is shared by both players.
    */
   | {
       type: "room";
       self: PlayerInfo;
       opponent: PlayerInfo | null;
       inGame: boolean;
+      alternate: boolean;
     }
+  /** Current statae of the game, sent when the game starts, after a move, and when a player joins or reconnects during a game. */
   | {
       type: "game";
       state: GameState;
       you: Player;
       turnEndsInMs: number | null;
     }
+  /** The opponent's selected tiles during their turn. */
   | { type: "selection"; keys: string[] }
   | { type: "error"; reason: ServerError };

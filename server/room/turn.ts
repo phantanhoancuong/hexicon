@@ -7,7 +7,7 @@ import { getTile, keyToCoord } from "@/game/hex";
 import type { GameState, Move } from "@/types/GameState";
 
 import { TURN_MS } from "@server/constants";
-import type { Sides } from "./lobby";
+import type { Sides } from "@server/room/lobby";
 
 /** The game of a room, as it is kept in storage. */
 export type StoredGame = {
@@ -40,18 +40,20 @@ export const isRunning = (game: StoredGame | null): boolean =>
  *
  * @param previous - The game that has finished in this room, or `null` if there is none.
  * @param dictionary - Used to deal letters.
+ * @param alternate - Whether the player who goes first alternates between matches. If not the same player starts again.
  * @param now - The time now, in milliseconds.
  * @returns The new game.
  */
 export const startGame = (
   previous: StoredGame | null,
   dictionary: Dictionary,
+  alternate: boolean,
   now: number,
 ): StoredGame =>
   withTurnClock(
     previous === null
       ? dealState(createGameState(PLAYERS[0]), dictionary)
-      : nextGame(previous.state, dictionary, false),
+      : nextGame(previous.state, dictionary, alternate),
     now,
   );
 
@@ -121,6 +123,13 @@ export const msUntilTurnEnds = (
 ): number | null =>
   game.turnEndsAt === null ? null : Math.max(0, game.turnEndsAt - now);
 
+/**
+ * Validates and cleans the selected tiles that a client sent, before the server passes them on to the opponent.
+ *
+ * @param game - The game.
+ * @param keys - Tile keys sent by a player, in the order they were picked.
+ * @returns The keys that are tiles a player can select, in the same order and without repeats.
+ */
 export const selectableKeys = (game: StoredGame, keys: string[]): string[] => {
   const seen = new Set<string>();
   return keys.filter((key) => {

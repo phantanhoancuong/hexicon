@@ -12,6 +12,10 @@ export const SIDES_KEY = "sides";
 /** Storage key of the flag that says the room was made by `POST /rooms`. Joining a room without this flag is refused. */
 export const CREATED_KEY = "created";
 
+/** Storage key of ALTERNATE FIRST TURN setting. */
+export const ALTERNATE_KEY = "alternate";
+export const DEFAULT_ALTERNATE = true;
+
 /** Storage key of the game being played in the room. Kept after the game ends so the players can play again. */
 export const GAME_KEY = "game";
 

@@ -1,4 +1,5 @@
 import { createSetting } from "@/lib/createSetting";
+import { isBoolean } from "@/lib/guards";
 
 import { DIFFICULTIES, Difficulty } from "@/game/difficulty";
 import { MODES, Mode } from "@/game/mode";
@@ -52,9 +53,6 @@ export const useMode = createSetting<Mode>(
  * Online play's rules are in the game room.
  */
 export type AlternateMode = Exclude<Mode, "online">;
-
-const isBoolean = (value: unknown): value is boolean =>
-  typeof value === "boolean";
 
 const alternateByMode = {
   local: createLocalSetting("alternate", true, isBoolean),

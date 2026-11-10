@@ -10,8 +10,10 @@ import type { PlayerInfo } from "@/types/Online";
 import type { ConnectionState } from "@server/connection";
 import { isReady, send, tokenOf } from "@server/connection";
 import {
+  ALTERNATE_KEY,
   CLAIM_PATH,
   CREATED_KEY,
+  DEFAULT_ALTERNATE,
   EMPTY_ROOM_SECONDS,
   GAME_KEY,
   MAX_PLAYERS,
@@ -20,9 +22,9 @@ import {
   TURN_MS,
 } from "@server/constants";
 import { getDictionary } from "@server/dictionary";
-import type { Sides } from "./lobby";
-import { canBeReady, everyoneReady } from "./lobby";
-import type { StoredGame } from "./turn";
+import type { Sides } from "@server/room/lobby";
+import { canBeReady, everyoneReady } from "@server/room/lobby";
+import type { StoredGame } from "@server/room/turn";
 import {
   expireTurn,
   isRunning,
@@ -31,7 +33,7 @@ import {
   playMove,
   selectableKeys,
   startGame,
-} from "./turn";
+} from "@server/room/turn";
 
 export type Env = { Main: DurableObjectNamespace<Room> };
 
@@ -78,13 +80,16 @@ export class Room extends Server<Env> {
 
     switch (parsed.type) {
       case "join":
-        await this.join(connection, parsed.token);
+        await this.join(connection, parsed.token, parsed.alternate);
         return;
       case "choose-side":
         await this.chooseSide(connection, parsed.side);
         return;
       case "set-ready":
         await this.setReady(connection, parsed.ready);
+        return;
+      case "set-alternate":
+        await this.setAlternate(connection, parsed.alternate);
         return;
       case "leave":
         await this.leave(connection);
@@ -142,9 +147,14 @@ export class Room extends Server<Env> {
    * If a game is being played, the player is sent to that game.
    *
    * @param connection - The connection that sent `join`.
-   * @param token - The token from an earlier `welcome`, or `null` for a new player.  
+   * @param token - The token from an earlier `welcome`, or `null` for a new player.
+   * @param alternate - The player's ALTERNATE FIRST TURN setting if the client sent one. Used only for the first player in the room to set the room's setting.
    */
-  private async join(connection: Connection, token: string | null) {
+  private async join(
+    connection: Connection,
+    token: string | null,
+    alternate?: boolean,
+  ) {
     if (tokenOf(connection) !== null) {
       send(connection, { type: "error", reason: "invalid-message" });
       return;
@@ -163,9 +173,12 @@ export class Room extends Server<Env> {
         send(connection, { type: "error", reason: "room-full" });
         return;
       }
+      const firstPlayer = tokens.length === 0;
       own = crypto.randomUUID();
       tokens.push(own);
       await this.ctx.storage.put(TOKENS_KEY, tokens);
+      if (firstPlayer && alternate !== undefined)
+        await this.ctx.storage.put(ALTERNATE_KEY, alternate);
     }
 
     const roomWasEmpty = !Array.from(this.getConnections()).some(
@@ -275,8 +288,46 @@ export class Room extends Server<Env> {
         connection.setState({ token, ready: false } satisfies ConnectionState);
     }
 
-    await this.putGame(startGame(previous, getDictionary(), Date.now()));
+    await this.putGame(
+      startGame(
+        previous,
+        getDictionary(),
+        await this.getAlternate(),
+        Date.now(),
+      ),
+    );
     return true;
+  }
+
+  /**
+   * Sets whether the player who goes first alternates between matches.
+   *
+   * Changing the value is refused during a game or while the player is ready.
+   *
+   * Changing the value successful will unready every other players in the room.
+   *
+   * @param connection - The connection that sent `set-alternate`.
+   * @param alternate - `true` if the player who goes first alternates between matches.
+   */
+  private async setAlternate(connection: Connection, alternate: boolean) {
+    const own = tokenOf(connection);
+    if (own === null) {
+      send(connection, { type: "error", reason: "invalid-message" });
+      return;
+    }
+
+    const changes = alternate !== (await this.getAlternate());
+    if (changes && !isReady(connection) && !isRunning(await this.getGame())) {
+      await this.ctx.storage.put(ALTERNATE_KEY, alternate);
+
+      for (const other of this.getConnections()) {
+        const token = tokenOf(other);
+        if (token !== null)
+          other.setState({ token, ready: false } satisfies ConnectionState);
+      }
+    }
+
+    await this.broadcastRoom();
   }
 
   /**
@@ -315,6 +366,12 @@ export class Room extends Server<Env> {
     }
   }
 
+  /**
+   * Cleans and passes a player's selected tiles through `selectableKeys()` onto their opponent so they can watch the live selection.
+   *
+   * @param connection - The connection that sent `select`.
+   * @param keys - The keys of the selected tiles, in the order they were picked.
+   */
   private async select(connection: Connection, keys: string[]) {
     const own = tokenOf(connection);
     if (own === null) {
@@ -368,6 +425,7 @@ export class Room extends Server<Env> {
     const tokens = await this.getTokens();
     const sides = await this.getSides();
     const inGame = (await this.getGame()) !== null;
+    const alternate = await this.getAlternate();
     const connected = new Set<string>();
     const ready = new Set<string>();
 
@@ -398,6 +456,7 @@ export class Room extends Server<Env> {
         self: infoOf(own),
         opponent,
         inGame,
+        alternate,
       });
     }
   }
@@ -473,6 +532,13 @@ export class Room extends Server<Env> {
   /** The side each player has taken, by token. */
   private async getSides(): Promise<Sides> {
     return (await this.ctx.storage.get<Sides>(SIDES_KEY)) ?? {};
+  }
+
+  /** If the player who goes first alternates between matches. */
+  private async getAlternate(): Promise<boolean> {
+    return (
+      (await this.ctx.storage.get<boolean>(ALTERNATE_KEY)) ?? DEFAULT_ALTERNATE
+    );
   }
 
   /** The game being played in the room, or `null` if there is none. */

@@ -1,3 +1,5 @@
+import { isRecord } from "@/lib/guards";
+
 import { Player } from "@/types/HexTile";
 import { ClientMessage } from "@/types/Online";
 
@@ -6,10 +8,6 @@ const MAX_TOKEN_LENGTH = 64;
 
 const MAX_WORD_TILES = 45;
 const MAX_KEY_LENGTH = 16;
-
-/** If a value is a plain object (not `null` and not an array). */
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** If a value is a valid side. */
 const isSide = (value: unknown): value is Player => value === 1 || value === 2;
