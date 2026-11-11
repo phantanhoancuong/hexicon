@@ -1,4 +1,4 @@
-import { isRecord } from "@/lib/guards";
+import { isBoolean, isRecord } from "@/lib/guards";
 
 import { Player } from "@/types/HexTile";
 import { ClientMessage } from "@/types/Online";
@@ -39,14 +39,16 @@ export const parseClientMessage = (raw: string): ClientMessage | null => {
 
   switch (data.type) {
     case "join": {
-      const { token } = data;
-      if (token === null) return { type: "join", token: null };
+      const { token, alternate } = data;
+      if (alternate !== undefined && !isBoolean(alternate)) return null;
+
+      if (token === null) return { type: "join", token: null, alternate };
       if (
         typeof token === "string" &&
         token.length > 0 &&
         token.length <= MAX_TOKEN_LENGTH
       ) {
-        return { type: "join", token };
+        return { type: "join", token, alternate };
       }
       return null;
     }
@@ -55,9 +57,14 @@ export const parseClientMessage = (raw: string): ClientMessage | null => {
       if (side === null || isSide(side)) return { type: "choose-side", side };
       return null;
     }
+    case "set-alternate": {
+      const { alternate } = data;
+      if (isBoolean(alternate)) return { type: "set-alternate", alternate };
+      return null;
+    }
     case "set-ready": {
       const { ready } = data;
-      if (typeof ready === "boolean") return { type: "set-ready", ready };
+      if (isBoolean(ready)) return { type: "set-ready", ready };
       return null;
     }
     case "leave":

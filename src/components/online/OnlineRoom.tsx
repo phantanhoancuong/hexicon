@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import OnlineGame from "@/components/game/OnlineGame";
 import SideTiles from "@/components/online/SideTiles";
 import { Button, buttonClass } from "@/components/ui";
+import Toggle from "@/components/ui/Toggle";
 
 import { playerName } from "@/game/names";
 import {
@@ -14,6 +15,7 @@ import {
   type OnlineError,
   type RoomView,
 } from "@/hooks/useOnlineRoom";
+import { useAlternate } from "@/lib/settings";
 import { normalizeRoomCode } from "@/online/roomCode";
 import { useState } from "react";
 
@@ -90,11 +92,13 @@ export default function OnlineRoom({ code }: { code: string }) {
     error,
     chooseSide,
     setReady,
+    setAlternate,
     submit,
     select,
     leave,
   } = useOnlineRoom(normalized);
   const [copied, setCopied] = useState<boolean>(false);
+  const [, setOwnAlternate] = useAlternate("online");
 
   if (normalized === null)
     return <Problem message="You've entered an invalid room code." />;
@@ -108,6 +112,11 @@ export default function OnlineRoom({ code }: { code: string }) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), COPIED_MESSAGE_MS);
     } catch {}
+  };
+
+  const handleAlternate = (alternate: boolean): void => {
+    setOwnAlternate(alternate);
+    setAlternate(alternate);
   };
 
   const handleLeave = (): void => {
@@ -129,7 +138,11 @@ export default function OnlineRoom({ code }: { code: string }) {
       />
     );
 
-  const { self, opponent } = room ?? { self: null, opponent: null };
+  const { self, opponent, alternate } = room ?? {
+    self: null,
+    opponent: null,
+    alternate: true,
+  };
   const canReady =
     self !== null &&
     self.side !== null &&
@@ -156,6 +169,12 @@ export default function OnlineRoom({ code }: { code: string }) {
       {self !== null && (
         <>
           <SideTiles self={self} opponent={opponent} onChoose={chooseSide} />
+          <Toggle
+            label="ALTERNATE FIRST TURN"
+            checked={alternate}
+            disabled={self.ready}
+            onChange={handleAlternate}
+          />
           <Button
             size="lg"
             variant={self.ready ? "secondary" : "primary"}

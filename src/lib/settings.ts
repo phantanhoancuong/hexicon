@@ -23,6 +23,7 @@ const createModeSetting =
 
 const createLocalSetting = createModeSetting("local");
 const createBotSetting = createModeSetting("bot");
+const createOnlineSetting = createModeSetting("online");
 
 /** If the screen flips each turn in local play. `null` means the player has not chosen yet. */
 export const useFlip = createLocalSetting(
@@ -47,16 +48,13 @@ export const useMode = createSetting<Mode>(
     typeof value === "string" && MODES.some((mode) => mode === value),
 );
 
-/**
- * The modes that have ALTERNATE FIRST TURN setting.
- *
- * Online play's rules are in the game room.
- */
-export type AlternateMode = Exclude<Mode, "online">;
+/** The modes that have ALTERNATE FIRST TURN setting. */
+export type AlternateMode = Mode;
 
 const alternateByMode = {
   local: createLocalSetting("alternate", true, isBoolean),
   bot: createBotSetting("alternate", true, isBoolean),
+  online: createOnlineSetting("alternate", true, isBoolean),
 } satisfies Record<AlternateMode, unknown>;
 
 /** If the first turn belongs to alternating players between matches. */
