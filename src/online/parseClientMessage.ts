@@ -1,3 +1,5 @@
+import { isBoolean, isRecord } from "@/lib/guards";
+
 import { Player } from "@/types/HexTile";
 import { ClientMessage } from "@/types/Online";
 
@@ -6,10 +8,6 @@ const MAX_TOKEN_LENGTH = 64;
 
 const MAX_WORD_TILES = 45;
 const MAX_KEY_LENGTH = 16;
-
-/** If a value is a plain object (not `null` and not an array). */
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** If a value is a valid side. */
 const isSide = (value: unknown): value is Player => value === 1 || value === 2;
@@ -41,14 +39,16 @@ export const parseClientMessage = (raw: string): ClientMessage | null => {
 
   switch (data.type) {
     case "join": {
-      const { token } = data;
-      if (token === null) return { type: "join", token: null };
+      const { token, alternate } = data;
+      if (alternate !== undefined && !isBoolean(alternate)) return null;
+
+      if (token === null) return { type: "join", token: null, alternate };
       if (
         typeof token === "string" &&
         token.length > 0 &&
         token.length <= MAX_TOKEN_LENGTH
       ) {
-        return { type: "join", token };
+        return { type: "join", token, alternate };
       }
       return null;
     }
@@ -57,9 +57,14 @@ export const parseClientMessage = (raw: string): ClientMessage | null => {
       if (side === null || isSide(side)) return { type: "choose-side", side };
       return null;
     }
+    case "set-alternate": {
+      const { alternate } = data;
+      if (isBoolean(alternate)) return { type: "set-alternate", alternate };
+      return null;
+    }
     case "set-ready": {
       const { ready } = data;
-      if (typeof ready === "boolean") return { type: "set-ready", ready };
+      if (isBoolean(ready)) return { type: "set-ready", ready };
       return null;
     }
     case "leave":

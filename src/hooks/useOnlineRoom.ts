@@ -4,6 +4,7 @@ import PartySocket from "partysocket";
 
 import { getServerHost, isServerSecure } from "@/lib/online/server";
 import { clearSession, loadSession, saveSession } from "@/lib/online/session";
+import { useAlternate } from "@/lib/settings";
 import { CLOSE_REPLACED } from "@/online/closeCodes";
 
 import type { GameState } from "@/types/GameState";
@@ -54,7 +55,14 @@ export const useOnlineRoom = (code: string | null) => {
   const [game, setGame] = useState<GameView | null>(null);
   const [opponentSelection, setOpponentSelection] = useState<string[]>([]);
   const [error, setError] = useState<OnlineError | null>(null);
+  const [alternate] = useAlternate("online");
+  const alternateRef = useRef(alternate);
   const controlsRef = useRef<Controls | null>(null);
+
+  // Lets the socket read the latest rule when it reconnects, without restarting it.
+  useEffect(() => {
+    alternateRef.current = alternate;
+  }, [alternate]);
 
   useEffect(() => {
     if (code === null) return;
@@ -92,7 +100,7 @@ export const useOnlineRoom = (code: string | null) => {
       if (stopped) return;
       const session = loadSession();
       const token = session?.code === code ? session.token : null;
-      sendMessage({ type: "join", token });
+      sendMessage({ type: "join", token, alternate: alternateRef.current });
     });
 
     socket.addEventListener("message", (event) => {
@@ -166,6 +174,10 @@ export const useOnlineRoom = (code: string | null) => {
     controlsRef.current?.send({ type: "set-ready", ready });
   }, []);
 
+  const setAlternate = useCallback((value: boolean) => {
+    controlsRef.current?.send({ type: "set-alternate", alternate: value });
+  }, []);
+
   const submit = useCallback((keys: string[]) => {
     controlsRef.current?.send({ type: "submit", keys });
   }, []);
@@ -186,6 +198,7 @@ export const useOnlineRoom = (code: string | null) => {
     error,
     chooseSide,
     setReady,
+    setAlternate,
     submit,
     select,
     leave,

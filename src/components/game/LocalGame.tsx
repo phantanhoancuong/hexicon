@@ -43,7 +43,7 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
   const [events, setEvents] = useNoticeEvents();
   const { status, dictionary, isValidWord } = useDictionary();
   const [flip, setFlip] = useFlip();
-  const [alternate] = useAlternate();
+  const [alternate] = useAlternate(botPlayer === undefined ? "local" : "bot");
   const [difficulty] = useDifficulty();
   const mounted = useMounted();
 

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import OnlineGame from "@/components/game/OnlineGame";
-import SideTiles from "@/components/online/SideTiles";
+import RoomSetting from "@/components/online/RoomSetting";
+import Seats from "@/components/online/Seats";
 import { Button, buttonClass } from "@/components/ui";
 
 import { playerName } from "@/game/names";
@@ -14,6 +15,7 @@ import {
   type OnlineError,
   type RoomView,
 } from "@/hooks/useOnlineRoom";
+import { useAlternate } from "@/lib/settings";
 import { normalizeRoomCode } from "@/online/roomCode";
 import { useState } from "react";
 
@@ -38,24 +40,22 @@ const ERROR_MESSAGE: Record<OnlineError, string> = {
 const describeRoom = (
   status: ConnectionStatus,
   room: RoomView | null,
-): string => {
+): string | null => {
   if (status === "reconnecting") return "Connection lost. Reconnecting...";
   if (status !== "joined" || room === null) return "Connecting...";
 
   const { self, opponent } = room;
-  if (opponent === null) return "Waiting for your opponent to join";
-  if (!opponent.connected) return "Your opponent disconnected";
-  if (self.ready && opponent.ready) return "Both players are ready";
-  if (self.side === null) return "Pick a side";
-  if (self.side === opponent.side) {
+  if (
+    opponent?.connected === true &&
+    self.side !== null &&
+    self.side === opponent.side
+  ) {
     const side = playerName(self.side).toUpperCase();
     return opponent.ready
       ? `Your opponent is ready as ${side}. Pick the other side to be ready.`
       : `You both picked ${side}. Only one of you can be ready as ${side}.`;
   }
-  if (self.ready) return "Waiting for your opponent to be ready";
-  if (opponent.ready) return "Your opponent is ready";
-  return "Press READY when you are set";
+  return null;
 };
 
 function Problem({ message }: { message: string }) {
@@ -90,11 +90,13 @@ export default function OnlineRoom({ code }: { code: string }) {
     error,
     chooseSide,
     setReady,
+    setAlternate,
     submit,
     select,
     leave,
   } = useOnlineRoom(normalized);
   const [copied, setCopied] = useState<boolean>(false);
+  const [, setOwnAlternate] = useAlternate("online");
 
   if (normalized === null)
     return <Problem message="You've entered an invalid room code." />;
@@ -108,6 +110,11 @@ export default function OnlineRoom({ code }: { code: string }) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), COPIED_MESSAGE_MS);
     } catch {}
+  };
+
+  const handleAlternate = (alternate: boolean): void => {
+    setOwnAlternate(alternate);
+    setAlternate(alternate);
   };
 
   const handleLeave = (): void => {
@@ -129,14 +136,18 @@ export default function OnlineRoom({ code }: { code: string }) {
       />
     );
 
-  const { self, opponent } = room ?? { self: null, opponent: null };
+  const { self, opponent, alternate } = room ?? {
+    self: null,
+    opponent: null,
+    alternate: true,
+  };
   const canReady =
     self !== null &&
     self.side !== null &&
     !(opponent?.ready === true && opponent.side === self.side);
 
   return (
-    <div className="flex h-full w-full max-w-xs flex-col items-center justify-center gap-4 pb-12">
+    <div className="flex h-full w-full max-w-xs flex-col items-center justify-center gap-5 pb-12">
       <section className="flex w-full items-center justify-between gap-3 rounded-md bg-foreground/10 px-4 py-3">
         <div className="flex flex-col">
           <span className="text-xs text-muted-foreground">Room code</span>
@@ -155,7 +166,30 @@ export default function OnlineRoom({ code }: { code: string }) {
 
       {self !== null && (
         <>
-          <SideTiles self={self} opponent={opponent} onChoose={chooseSide} />
+          <section aria-label="Players" className="flex w-full flex-col gap-2">
+            <h2 className="text-xs font-semibold tracking-widest text-muted-foreground">
+              PLAYERS
+            </h2>
+            <div className="divide-y divide-border overflow-hidden rounded-md border border-border bg-surface">
+              <Seats self={self} opponent={opponent} onChoose={chooseSide} />
+            </div>
+          </section>
+
+          <section
+            aria-label="Room settings"
+            className="flex w-full flex-col gap-2"
+          >
+            <h2 className="text-xs font-semibold tracking-widest text-muted-foreground">
+              ROOM SETTINGS
+            </h2>
+            <RoomSetting
+              label="Alternate first turn"
+              checked={alternate}
+              disabled={self.ready}
+              onChange={handleAlternate}
+            />
+          </section>
+
           <Button
             size="lg"
             variant={self.ready ? "secondary" : "primary"}

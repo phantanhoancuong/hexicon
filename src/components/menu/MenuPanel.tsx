@@ -30,7 +30,7 @@ const MODE_BUTTONS: {
     options: (
       <>
         <AutoFlipSwitch />
-        <AlternateOption />
+        <AlternateOption mode="local" />
       </>
     ),
   },
@@ -41,7 +41,7 @@ const MODE_BUTTONS: {
     options: (
       <>
         <DifficultySelect />
-        <AlternateOption />
+        <AlternateOption mode="bot" />
       </>
     ),
   },

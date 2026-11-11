@@ -2,11 +2,11 @@
 
 import { Toggle } from "@/components/ui";
 
-import { useAlternate } from "@/lib/settings";
+import { AlternateMode, useAlternate } from "@/lib/settings";
 
 /** Menu toggle for option if the player to play the first turn alternates between games. */
-export default function AlternateOption() {
-  const [alternate, setAlternate] = useAlternate();
+export default function AlternateOption({ mode }: { mode: AlternateMode }) {
+  const [alternate, setAlternate] = useAlternate(mode);
 
   return (
     <Toggle
