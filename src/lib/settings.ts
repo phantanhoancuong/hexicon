@@ -48,6 +48,13 @@ export const useMode = createSetting<Mode>(
     typeof value === "string" && MODES.some((mode) => mode === value),
 );
 
+export const useVolume = createSetting(
+  "volume",
+  100,
+  (value): value is number =>
+    typeof value === "number" && value >= 0 && value <= 100,
+);
+
 /** The modes that have ALTERNATE FIRST TURN setting. */
 export type AlternateMode = Mode;
 
@@ -59,5 +66,3 @@ const alternateByMode = {
 
 /** If the first turn belongs to alternating players between matches. */
 export const useAlternate = (mode: AlternateMode) => alternateByMode[mode]();
-
-export const useSound = createSetting("sound", true, isBoolean);

@@ -8,6 +8,7 @@ import {
   AutoFlipButton,
   BackLink,
   DictionaryPreload,
+  SettingsButton,
   ThemeButton,
 } from "@/components/layout";
 
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <BackLink />
               <div className="ml-auto flex items-center gap-2">
                 <AutoFlipButton />
+                <SettingsButton />
                 <ThemeButton />
               </div>
             </header>
