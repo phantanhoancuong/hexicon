@@ -1,3 +1,4 @@
+/** The sounds the game can make. */
 export type SoundName = "select" | "play" | "turn" | "over";
 
 type Tone = {
@@ -7,13 +8,15 @@ type Tone = {
   type?: OscillatorType;
 };
 
-const VOLUME = 0.12;
+const MAX_GAIN = 0.12;
 
 const ATTACK = 0.01;
 
 const SILENCE = 0.0001;
 
 const SCALE = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19];
+
+const RANGE_DB = 24;
 
 const note = (semitonesFromC5: number): number =>
   523.25 * 2 ** (semitonesFromC5 / 12);
@@ -56,7 +59,11 @@ const getContext = (): AudioContext | null => {
   return context;
 };
 
-const playTone = (audio: AudioContext, tone: Tone): void => {
+const playTone = (audio: AudioContext, tone: Tone, volume: number): void => {
+  const peak = Math.max(
+    MAX_GAIN * 10 ** ((-(1 - volume) * RANGE_DB) / 20),
+    SILENCE * 2,
+  );
   const startAt = audio.currentTime + tone.start;
   const endAt = startAt + tone.duration;
 
@@ -66,7 +73,7 @@ const playTone = (audio: AudioContext, tone: Tone): void => {
 
   const gain = audio.createGain();
   gain.gain.setValueAtTime(SILENCE, startAt);
-  gain.gain.exponentialRampToValueAtTime(VOLUME, startAt + ATTACK);
+  gain.gain.exponentialRampToValueAtTime(peak, startAt + ATTACK);
   gain.gain.exponentialRampToValueAtTime(SILENCE, endAt);
 
   oscillator.connect(gain);
@@ -75,8 +82,9 @@ const playTone = (audio: AudioContext, tone: Tone): void => {
   oscillator.stop(endAt + 0.02);
 };
 
-export const playSound = (name: SoundName, step = 0): void => {
+export const playSound = (name: SoundName, step = 0, volume = 1): void => {
+  if (volume <= 0) return;
   const audio = getContext();
   if (audio === null) return;
-  for (const tone of SOUNDS[name](step)) playTone(audio, tone);
+  for (const tone of SOUNDS[name](step)) playTone(audio, tone, volume);
 };

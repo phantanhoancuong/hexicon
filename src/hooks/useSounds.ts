@@ -1,16 +1,15 @@
 import { useCallback } from "react";
 
-import { useSound } from "@/lib/settings";
+import { useVolume } from "@/lib/settings";
 import type { SoundName } from "@/lib/sounds";
 import { playSound } from "@/lib/sounds";
 
 export const useSounds = () => {
-  const [enabled] = useSound();
+  const [volume] = useVolume();
 
   return useCallback(
-    (name: SoundName, step?: number): void => {
-      if (enabled) playSound(name, step);
-    },
-    [enabled],
+    (name: SoundName, step?: number): void =>
+      playSound(name, step, volume / 100),
+    [volume],
   );
 };
