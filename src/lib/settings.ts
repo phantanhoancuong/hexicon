@@ -59,3 +59,5 @@ const alternateByMode = {
 
 /** If the first turn belongs to alternating players between matches. */
 export const useAlternate = (mode: AlternateMode) => alternateByMode[mode]();
+
+export const useSound = createSetting("sound", true, isBoolean);

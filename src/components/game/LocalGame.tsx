@@ -22,6 +22,7 @@ import { useCountdown } from "@/hooks/useCountdown";
 import { useDictionary } from "@/hooks/useDictionary";
 import { useMounted } from "@/hooks/useMounted";
 import { useNoticeEvents } from "@/hooks/useNoticeEvents";
+import { useSounds } from "@/hooks/useSounds";
 
 import { useAlternate, useDifficulty, useFlip } from "@/lib/settings";
 
@@ -46,6 +47,7 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
   const [alternate] = useAlternate(botPlayer === undefined ? "local" : "bot");
   const [difficulty] = useDifficulty();
   const mounted = useMounted();
+  const play = useSounds();
 
   const { grid, turn, currentPlayer, wins } = state;
   const result = getGameResult(grid);
@@ -69,6 +71,9 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
    * The "played" notice is only shown for the bot's moves, so local play looks the same as before.
    */
   const commit = (next: GameState): void => {
+    if (getGameResult(next.grid).over) play("over");
+    else if (next.events.some((event) => event.type === "played")) play("play");
+
     setState(next);
     setEvents(
       next.events.filter(
@@ -86,6 +91,7 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
     if (!tile || !isSelectable(tile)) return;
 
     const key = coordToKey(coord);
+    if (!selectedKeys.has(key)) play("select", selectedKeys.size);
     setSelectedKeys((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);

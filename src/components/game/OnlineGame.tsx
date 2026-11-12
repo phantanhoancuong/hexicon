@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import GameBoard, { type PlayedWord } from "@/components/game/GameBoard";
 import GameOverDialog from "@/components/game/GameOverDialog";
@@ -15,6 +15,7 @@ import { useDeadlineCountdown } from "@/hooks/useDeadlineCountdown";
 import { useDictionary } from "@/hooks/useDictionary";
 import { useNoticeEvents } from "@/hooks/useNoticeEvents";
 import type { GameView, RoomView } from "@/hooks/useOnlineRoom";
+import { useSounds } from "@/hooks/useSounds";
 
 import { HexCoord } from "@/types/HexTile";
 
@@ -57,6 +58,8 @@ export default function OnlineGame({
   const [events, setEvents] = useNoticeEvents();
   const { status, isValidWord } = useDictionary();
   const secondsLeft = useDeadlineCountdown(turnEndsAt, TURN_SECONDS);
+  const play = useSounds();
+  const soundedTurn = useRef(turn);
 
   const playedEvent = events.find((event) => event.type === "played");
   const played: PlayedWord | undefined = playedEvent && {
@@ -77,6 +80,16 @@ export default function OnlineGame({
     setEvents(state.events);
   }
 
+  useEffect(() => {
+    if (soundedTurn.current === turn) return;
+    soundedTurn.current = turn;
+
+    if (result.over) play("over");
+    else if (currentPlayer === you) play("turn");
+    else if (state.events.some((event) => event.type === "played"))
+      play("play");
+  }, [turn, result.over, currentPlayer, you, state.events, play]);
+
   /** Toggles a tile in the current word. */
   const handleSelect = (coord: HexCoord): void => {
     if (!isMyTurn) return;
@@ -85,6 +98,7 @@ export default function OnlineGame({
     if (!tile || !isSelectable(tile)) return;
 
     const key = coordToKey(coord);
+    if (!selectedKeys.has(key)) play("select", selectedKeys.size);
     const next = new Set(selectedKeys);
     if (next.has(key)) next.delete(key);
     else next.add(key);
