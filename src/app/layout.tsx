@@ -7,6 +7,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import {
   AutoFlipButton,
   BackLink,
+  ColorPalette,
   DictionaryPreload,
   SettingsButton,
   ThemeButton,
@@ -34,6 +35,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <ThemeProvider storageKey="hexicon:theme">
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `try{if(localStorage.getItem("hexicon:colorBlind")==="true")document.documentElement.dataset.palette="color-blind"}catch(e){}`,
+            }}
+          />
+          <ColorPalette />
           <DictionaryPreload />
           <div className="flex h-dvh flex-col overflow-hidden bg-background font-mono text-foreground">
             <header className="flex h-12 w-full shrink-0 items-center px-4 sm:px-8">

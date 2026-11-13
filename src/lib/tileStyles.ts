@@ -4,8 +4,8 @@ import type { Player, TileStatus } from "@/types/HexTile";
 export const STATUS_CLASS: Record<TileStatus, string> = {
   uninitialized: "bg-tile-uninitialized text-transparent",
   neutral: "bg-tile-neutral text-tile-neutral-foreground",
-  1: "bg-player-1 text-white",
-  2: "bg-player-2 text-white",
+  1: "bg-player-1 text-player-1-foreground",
+  2: "bg-player-2 text-player-2-foreground",
 };
 
 /** Selected tiles that would be captured, in the current player's color. */
@@ -25,6 +25,6 @@ export const THREATENED_CLASS: Record<Player, string> = {
 
 /** A player's solid color, used for the bar in `PlayerTag` and the winner badge in `GameOverDialog`. */
 export const PLAYER_TAG_CLASS: Record<Player, string> = {
-  1: "bg-player-1 text-white",
-  2: "bg-player-2 text-white",
+  1: "bg-player-1 text-player-1-foreground",
+  2: "bg-player-2 text-player-2-foreground",
 };

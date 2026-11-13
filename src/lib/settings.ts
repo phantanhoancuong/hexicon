@@ -55,7 +55,8 @@ export const useVolume = createSetting(
     typeof value === "number" && value >= 0 && value <= 100,
 );
 
-/** The modes that have ALTERNATE FIRST TURN setting. */
+export const useColorBlind = createSetting("colorBlind", false, isBoolean);
+
 export type AlternateMode = Mode;
 
 const alternateByMode = {
