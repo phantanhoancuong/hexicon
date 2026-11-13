@@ -2,15 +2,29 @@
 
 import { useEffect, useRef } from "react";
 
-import { Button, Icon, Slider } from "@/components/ui";
+import ColorPreview from "@/components/settings/ColorPreview";
+import {
+  Button,
+  Icon,
+  SegmentedControl,
+  Slider,
+  Toggle,
+} from "@/components/ui";
+import { useThemeTransition } from "@/hooks/useThemeTransition";
 import { volumeHigh, volumeLow, volumeMuted } from "@/icons";
-
-import { useVolume } from "@/lib/settings";
+import { useColorBlind, useVolume } from "@/lib/settings";
 import { playSound } from "@/lib/sounds";
 
+/** The volume levels the slider stops on. */
 const VOLUME_STEP = 25;
 
 const FALLBACK_VOLUME = 50;
+
+const THEMES = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+] as const;
 
 type SettingsDialogProps = {
   onClose: () => void;
@@ -19,6 +33,8 @@ type SettingsDialogProps = {
 export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [volume, setVolume] = useVolume();
+  const { theme, setTheme } = useThemeTransition();
+  const [colorBlind, setColorBlind] = useColorBlind();
   const lastVolume = useRef(volume > 0 ? volume : FALLBACK_VOLUME);
 
   useEffect(() => {
@@ -42,6 +58,8 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   };
 
   const muted = volume === 0;
+  const currentTheme =
+    THEMES.find(({ value }) => value === theme)?.value ?? "system";
 
   return (
     <dialog
@@ -59,7 +77,6 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       <div className="mt-4 flex flex-col gap-3">
         <Slider
           label="VOLUME"
-          description="How loud the game sounds are."
           value={volume}
           min={0}
           max={100}
@@ -84,6 +101,20 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
           onChange={handleVolumeChange}
           onCommit={(value) => playSound("select", 0, value / 100)}
         />
+        <SegmentedControl
+          card
+          label="THEME"
+          options={THEMES}
+          value={currentTheme}
+          onChange={setTheme}
+        />
+        <Toggle
+          label="COLOR-BLIND MODE"
+          description="Changes the tile colors to be easier to tell apart for color blind people."
+          checked={colorBlind}
+          onChange={setColorBlind}
+        />
+        <ColorPreview />
       </div>
       <Button
         autoFocus

@@ -1,14 +1,13 @@
 "use client";
 
-import { useTheme } from "next-themes";
-
 import { useMounted } from "@/hooks/useMounted";
+import { useThemeTransition } from "@/hooks/useThemeTransition";
 
 const THEMES = ["system", "light", "dark"] as const;
 
 /** Header button for the theme that cycles the theme through `system`, `light` and `dark`. */
 export default function ThemeButton() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useThemeTransition();
 
   const mounted = useMounted();
 

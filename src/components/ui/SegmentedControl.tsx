@@ -7,6 +7,8 @@ import Badge from "@/components/ui/Badge";
 type SegmentedControlProps<T extends string> = {
   label: string;
   badge?: string;
+  description?: string;
+  card?: boolean;
   options: readonly { value: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
@@ -15,6 +17,8 @@ type SegmentedControlProps<T extends string> = {
 export default function SegmentedControl<T extends string>({
   label,
   badge,
+  description,
+  card = false,
   options,
   value,
   onChange,
@@ -22,16 +26,30 @@ export default function SegmentedControl<T extends string>({
   const headingId = useId();
 
   return (
-    <div className="flex w-full flex-col gap-1.5">
-      <div className="flex items-center gap-2">
-        <span
-          id={headingId}
-          className="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
-        >
-          {label}
-        </span>
+    <div
+      className={`flex w-full flex-col ${
+        card ? "gap-3 rounded-md bg-foreground/10 p-3" : "gap-1.5"
+      }`}
+    >
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-2">
+          <span
+            id={headingId}
+            className={
+              card
+                ? "text-sm font-semibold tracking-wide"
+                : "text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+            }
+          >
+            {label}
+          </span>
 
-        {badge && <Badge>{badge}</Badge>}
+          {badge && <Badge>{badge}</Badge>}
+        </div>
+
+        {description && (
+          <span className="text-xs text-muted-foreground">{description}</span>
+        )}
       </div>
 
       <div
