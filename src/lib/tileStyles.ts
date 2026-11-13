@@ -10,17 +10,17 @@ export const STATUS_CLASS: Record<TileStatus, string> = {
 
 /** Selected tiles that would be captured, in the current player's color. */
 export const CAPTURABLE_CLASS: Record<Player, string> = {
-  1: "bg-player-1-soft text-stone-900",
-  2: "bg-player-2-soft text-stone-900",
+  1: "bg-player-1-soft text-slate-900",
+  2: "bg-player-2-soft text-slate-900",
 };
 
 /** Selected tiles that would not be captured. */
-export const SELECTED_CLASS = "bg-stone-400 text-stone-900";
+export const SELECTED_CLASS = "bg-slate-400 text-slate-900";
 
 /** Enemy tiles that would turn `neutral` if the move is played. */
 export const THREATENED_CLASS: Record<Player, string> = {
-  1: "bg-player-1-soft text-stone-900",
-  2: "bg-player-2-soft text-stone-900",
+  1: "bg-player-1-soft text-slate-900",
+  2: "bg-player-2-soft text-slate-900",
 };
 
 /** A player's solid color, used for the bar in `PlayerTag` and the winner badge in `GameOverDialog`. */
