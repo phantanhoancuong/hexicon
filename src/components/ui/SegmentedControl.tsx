@@ -65,10 +65,10 @@ export default function SegmentedControl<T extends string>({
               type="button"
               aria-pressed={isSelected}
               onClick={() => onChange(option.value)}
-              className={`h-8 flex-1 rounded text-xs font-semibold tracking-wide uppercase ${
+              className={`h-8 flex-1 cursor-pointer rounded text-xs font-semibold tracking-wide uppercase transition-colors motion-reduce:transition-none ${
                 isSelected
                   ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
               }`}
             >
               {option.label}

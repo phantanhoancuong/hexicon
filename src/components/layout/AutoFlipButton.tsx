@@ -19,10 +19,10 @@ export default function AutoFlipButton() {
 
   return (
     <button
-      className={`h-8 cursor-pointer rounded-md border px-3 font-mono text-xs tracking-wide transition-colors ${
+      className={`h-8 cursor-pointer rounded-md border-2 px-3 font-mono text-xs font-semibold tracking-wide transition-colors ${
         isOn
           ? "border-accent bg-accent text-accent-foreground"
-          : "border-border text-muted-foreground hover:text-foreground"
+          : "border-muted-foreground text-muted-foreground hover:text-foreground"
       }`}
       onClick={() => setFlip(!isOn)}
       aria-pressed={isOn}

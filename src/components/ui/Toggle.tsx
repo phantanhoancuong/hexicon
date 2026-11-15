@@ -26,7 +26,7 @@ export default function Toggle({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md bg-foreground/10 p-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md bg-foreground/10 p-3 text-left transition-colors not-disabled:hover:bg-foreground/15 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
     >
       <span className="flex flex-col gap-0.5">
         <span className="flex items-center gap-2">
