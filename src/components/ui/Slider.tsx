@@ -58,7 +58,7 @@ export default function Slider({
 
       <div className="flex items-center gap-2">
         {leading}
-        <div className="relative h-8 flex-1">
+        <div className="group relative h-8 flex-1">
           <input
             type="range"
             aria-labelledby={labelId}
@@ -72,7 +72,7 @@ export default function Slider({
               onCommit?.(Number(event.currentTarget.value))
             }
             onKeyUp={(event) => onCommit?.(Number(event.currentTarget.value))}
-            className="peer absolute inset-0 z-10 m-0 h-full w-full cursor-pointer appearance-none opacity-0 [&::-moz-range-thumb]:size-5 [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none"
+            className="absolute inset-0 z-10 m-0 h-full w-full cursor-pointer appearance-none opacity-0 [&::-moz-range-thumb]:size-5 [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none"
           />
 
           <div
@@ -99,7 +99,7 @@ export default function Slider({
             className="pointer-events-none absolute inset-x-2.5 top-1/2"
           >
             <span
-              className="absolute size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-background shadow-sm transition-[left] duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-foreground peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-transparent motion-reduce:transition-none"
+              className="absolute size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-background shadow-sm transition-[left,scale,box-shadow] duration-150 group-hover:scale-125 group-hover:ring-4 group-hover:ring-accent/30 group-has-focus-visible:ring-2 group-has-focus-visible:ring-foreground group-has-focus-visible:ring-offset-2 group-has-focus-visible:ring-offset-transparent motion-reduce:transition-none"
               style={{ left: position(index) }}
             />
           </div>

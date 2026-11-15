@@ -11,7 +11,7 @@ import {
   Toggle,
 } from "@/components/ui";
 import { useThemeTransition } from "@/hooks/useThemeTransition";
-import { volumeHigh, volumeLow, volumeMuted } from "@/icons";
+import { close, volumeHigh, volumeLow, volumeMuted } from "@/icons";
 import { useColorBlind, useVolume } from "@/lib/settings";
 import { playSound } from "@/lib/sounds";
 
@@ -71,9 +71,19 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       aria-labelledby="settings-title"
       className="m-auto w-[min(90vw,24rem)] rounded-md border border-border bg-background p-6 font-sans text-foreground shadow-md backdrop:bg-black/50"
     >
-      <h2 id="settings-title" className="text-lg font-semibold">
-        Settings
-      </h2>
+      <div className="flex items-center justify-between">
+        <h2 id="settings-title" className="text-lg font-semibold">
+          Settings
+        </h2>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close settings"
+          className="-mr-1 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
+        >
+          <Icon src={close} className="size-6" />
+        </button>
+      </div>
       <div className="mt-4 flex flex-col gap-3">
         <Slider
           label="VOLUME"
@@ -117,7 +127,6 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
         <ColorPreview />
       </div>
       <Button
-        autoFocus
         variant="secondary"
         className="mt-5 w-full font-mono text-sm"
         onClick={onClose}

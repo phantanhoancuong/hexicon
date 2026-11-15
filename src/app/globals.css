@@ -94,3 +94,7 @@ body {
     transform: scale(1);
   }
 }
+
+dialog {
+  user-select: none;
+}

@@ -10,7 +10,6 @@ import {
   ColorPalette,
   DictionaryPreload,
   SettingsButton,
-  ThemeButton,
 } from "@/components/layout";
 
 import { ThemeProvider } from "next-themes";
@@ -33,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col select-none">
         <ThemeProvider storageKey="hexicon:theme">
           <script
             dangerouslySetInnerHTML={{
@@ -48,7 +47,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <div className="ml-auto flex items-center gap-2">
                 <AutoFlipButton />
                 <SettingsButton />
-                <ThemeButton />
               </div>
             </header>
 

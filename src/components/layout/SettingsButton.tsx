@@ -1,24 +1,34 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { SettingsDialog } from "@/components/settings";
+import { Icon } from "@/components/ui";
+import { gear } from "@/icons";
 
 export default function SettingsButton() {
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
 
-  if (pathname !== "/") return null;
+  useEffect(() => {
+    if (wasOpen.current && !open) buttonRef.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
 
   return (
     <>
       <button
-        className="h-8 cursor-pointer rounded-md border border-border px-3 font-mono text-xs tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+        ref={buttonRef}
+        className="group -mr-1 flex size-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
+        aria-label="Settings"
       >
-        SETTINGS
+        <Icon
+          src={gear}
+          className={`size-7 transition-transform duration-300 group-hover:rotate-90 motion-reduce:transition-none ${open ? "rotate-90" : ""}`}
+        />
       </button>
       {open && <SettingsDialog onClose={() => setOpen(false)} />}
     </>

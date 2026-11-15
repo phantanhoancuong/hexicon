@@ -11,11 +11,12 @@ type ButtonStyle = {
 };
 
 const BASE_CLASS =
-  "flex cursor-pointer items-center justify-center rounded-md px-4 font-semibold tracking-wide disabled:cursor-not-allowed disabled:opacity-50";
+  "flex cursor-pointer items-center justify-center rounded-md px-4 font-semibold tracking-wide transition disabled:cursor-not-allowed disabled:opacity-50";
 
 const VARIANT_CLASS: Record<Variant, string> = {
-  primary: "bg-accent text-accent-foreground",
-  secondary: "border-2 border-border",
+  primary: "bg-accent text-accent-foreground not-disabled:hover:brightness-110",
+  secondary:
+    "border-2 border-border not-disabled:hover:border-muted-foreground not-disabled:hover:bg-foreground/10",
 };
 
 const SIZE_CLASS: Record<Size, string> = {
