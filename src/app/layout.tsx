@@ -9,6 +9,7 @@ import {
   BackLink,
   ColorPalette,
   DictionaryPreload,
+  HomeTitle,
   SettingsButton,
 } from "@/components/layout";
 
@@ -42,15 +43,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <ColorPalette />
           <DictionaryPreload />
           <div className="flex h-dvh flex-col overflow-hidden bg-background font-mono text-foreground">
-            <header className="flex h-12 w-full shrink-0 items-center px-4 sm:px-8">
+            <header className="mx-auto flex h-24 w-full max-w-384 shrink-0 items-center px-5 sm:h-26 sm:px-8 lg:h-28 lg:px-16">
               <BackLink />
+              <HomeTitle />
               <div className="ml-auto flex items-center gap-2">
                 <AutoFlipButton />
                 <SettingsButton />
               </div>
             </header>
 
-            <main className="flex min-h-0 flex-1 justify-center px-2 pb-2 sm:px-8 sm:pb-4">
+            <main className="mx-auto flex min-h-0 w-full max-w-384 flex-1 justify-center px-5 pb-2 sm:px-8 sm:pb-4 lg:px-16">
               {children}
             </main>
           </div>

@@ -65,7 +65,7 @@ function Problem({ message }: { message: string }) {
         {message}
       </p>
       <Link
-        href="/play/online"
+        href="/"
         className={buttonClass({
           variant: "secondary",
           size: "lg",
@@ -119,7 +119,7 @@ export default function OnlineRoom({ code }: { code: string }) {
 
   const handleLeave = (): void => {
     leave();
-    router.push("/play/online");
+    router.push("/");
   };
 
   if (room?.inGame === true && game !== null)
