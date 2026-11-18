@@ -3,6 +3,8 @@ export { default as close } from "@/icons/close_24dp_FFFFFF_FILL0_wght400_GRAD0_
 export { default as crown } from "@/icons/crown_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg";
 export { default as globe } from "@/icons/globe_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
 export { default as group } from "@/icons/group_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
+export { default as logoBlack } from "@/icons/hexicon-logo-black.svg";
+export { default as logoWhite } from "@/icons/hexicon-logo-white.svg";
 export { default as volumeMuted } from "@/icons/no_sound_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
 export { default as robot } from "@/icons/robot_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
 export { default as gear } from "@/icons/settings_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg";
