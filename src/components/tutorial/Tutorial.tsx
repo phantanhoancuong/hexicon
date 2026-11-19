@@ -120,8 +120,8 @@ export default function Tutorial() {
       if (!onTile && event.target.closest("button, a, input") !== null) return;
       goNext();
     };
-    window.addEventListener("click", onClick);
-    return () => window.removeEventListener("click", onClick);
+    window.addEventListener("click", onClick, true);
+    return () => window.removeEventListener("click", onClick, true);
   });
 
   useEffect(() => {

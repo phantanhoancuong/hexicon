@@ -144,7 +144,7 @@ export const PAGES: Page[] = [
     ],
     explain: [
       {
-        text: "The letters touch your land so they will be CAPTURED and added to your territory",
+        text: "R-A-T touch your land so they get CAPTURED and added to your territory",
         focus: () => [
           { q: 1, r: 1 },
           { q: 2, r: -1 },
@@ -152,7 +152,7 @@ export const PAGES: Page[] = [
         ],
       },
     ],
-    ready: "Press SUBMIT.",
+    ready: "Press SUBMIT",
     success: "Captured!",
     prepare: (grid) => grid,
   },
@@ -168,7 +168,7 @@ export const PAGES: Page[] = [
         focus: () => [{ q: 3, r: 0 }],
       },
       {
-        text: "E and N link back to T so they will also be CAPTURED",
+        text: "E and N link back to T so they also get CAPTURED",
         focus: () => [
           { q: 3, r: 1 },
           { q: 3, r: 2 },
