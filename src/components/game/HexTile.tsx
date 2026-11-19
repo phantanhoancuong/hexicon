@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 
 import { Icon } from "@/components/ui";
 
+import { coordToKey } from "@/game/hex";
+
 import { crown } from "@/icons";
 
 import { HexCoord, HexTileData } from "@/types/HexTile";
@@ -46,6 +48,7 @@ export default function HexTile({ tile, colorClass, onSelect }: HexTileProps) {
         clipPath: HEX_CLIP,
         fontSize: "calc(var(--hex-w) * 0.4)",
       }}
+      data-key={coordToKey(tile.coord)}
       onClick={() => onSelect(tile.coord)}
       aria-label={tile.isCapital ? `Player ${tile.status} capital` : undefined}
     >

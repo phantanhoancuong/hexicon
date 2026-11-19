@@ -28,6 +28,7 @@ type HexGridProps = {
   currentPlayer: Player;
   /** Keys of the enemy tiles that would turn `neutral` on submit. */
   neutralizedKeys: Set<string>;
+  tileClassName?: (key: string) => string;
   onSelect: (coord: HexCoord) => void;
 };
 
@@ -60,10 +61,11 @@ export default function HexGrid({
   capturableKeys,
   currentPlayer,
   neutralizedKeys,
+  tileClassName,
   onSelect,
 }: HexGridProps) {
   return (
-    <div className="@container-size flex aspect-[5.5/6.06] min-h-0 w-full shrink items-center justify-center">
+    <div className="@container-size my-auto flex aspect-[5.5/6.06] min-h-0 w-full shrink items-center justify-center">
       <div className="flex flex-row items-center justify-center gap-0.5 hex-vars">
         {grid.map((column, columnIndex) => (
           <div
@@ -78,12 +80,12 @@ export default function HexGrid({
                 <HexTile
                   key={key}
                   tile={tile}
-                  colorClass={getColorClass(
+                  colorClass={`${getColorClass(
                     tile.status,
                     highlight,
                     currentPlayer,
                     neutralizedKeys.has(key),
-                  )}
+                  )} ${tileClassName?.(key) ?? ""}`}
                   onSelect={onSelect}
                 />
               );

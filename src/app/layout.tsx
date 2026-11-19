@@ -9,6 +9,7 @@ import {
   BackLink,
   ColorPalette,
   DictionaryPreload,
+  HelpLink,
   HomeTitle,
   SettingsButton,
 } from "@/components/layout";
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <HomeTitle />
               <div className="ml-auto flex items-center gap-2">
                 <AutoFlipButton />
+                <HelpLink />
                 <SettingsButton />
               </div>
             </header>
