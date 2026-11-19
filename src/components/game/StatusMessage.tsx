@@ -1,6 +1,8 @@
 import { describeEvents } from "@/game/events";
 import { Perspective } from "@/game/names";
 
+import { COACH_CLASS, NOTICE_CLASS } from "@/lib/noticeStyles";
+
 import { GameEvent } from "@/types/GameEvent";
 
 const STATUS_MESSAGE = {
@@ -12,16 +14,19 @@ const STATUS_MESSAGE = {
 type StatusMessageProps = {
   status: keyof typeof STATUS_MESSAGE;
   events: GameEvent[];
+  notice?: string;
   perspective?: Perspective;
 };
 
 export default function StatusMessage({
   status,
   events,
+  notice,
   perspective,
 }: StatusMessageProps) {
   const statusMessage = STATUS_MESSAGE[status];
-  const message = statusMessage || describeEvents(events, perspective);
+  const message =
+    statusMessage || notice || describeEvents(events, perspective);
 
   return (
     <div className="relative flex h-8 w-full shrink-0 items-center justify-center">
@@ -32,7 +37,7 @@ export default function StatusMessage({
           className={
             statusMessage
               ? "px-2 text-center font-sans text-base leading-6 font-medium text-foreground"
-              : "animate-[notice-pop_0.3s_ease-out] rounded-full bg-foreground px-4 py-1 text-center font-sans text-base leading-6 font-semibold text-background motion-reduce:animate-none"
+              : `${message === notice ? COACH_CLASS : NOTICE_CLASS} px-4 py-1`
           }
         >
           {message}

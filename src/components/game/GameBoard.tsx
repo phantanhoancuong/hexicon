@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import HexGrid from "@/components/game/HexGrid";
 import Scoreboard from "@/components/game/Scoreboard";
@@ -32,6 +32,7 @@ type GameBoardProps = {
   /** Notices to show in the status line. */
   events: GameEvent[];
   perspective?: Perspective;
+  botPlayer?: Player;
   /** If a word is in the dictionary. */
   isValidWord: (word: string) => boolean;
   played?: PlayedWord;
@@ -39,6 +40,9 @@ type GameBoardProps = {
   canPlay: boolean;
   /** Turns the board upside down. */
   flipped: boolean;
+  notice?: string;
+  tileClassName?: (key: string) => string;
+  footer?: ReactNode;
   onSelect: (coord: HexCoord) => void;
   onSubmit: () => void;
 };
@@ -65,6 +69,9 @@ export default function GameBoard({
   played,
   canPlay,
   flipped,
+  notice,
+  tileClassName,
+  footer,
   onSelect,
   onSubmit,
 }: GameBoardProps) {
@@ -94,7 +101,7 @@ export default function GameBoard({
   return (
     <div className="flex h-full w-full max-w-xl justify-center">
       <div
-        className={`flex h-full w-full flex-col items-center justify-center gap-(--gap) transition-transform duration-700 [--gap:clamp(0.5rem,1.5dvh,1rem)] motion-reduce:transition-none ${flipped ? "rotate-180" : ""}`}
+        className={`flex h-full w-full flex-col items-center justify-start gap-(--gap) transition-transform duration-700 [--gap:clamp(0.5rem,1.5dvh,1rem)] motion-reduce:transition-none ${flipped ? "rotate-180" : ""}`}
       >
         <Scoreboard
           wins={wins}
@@ -107,6 +114,7 @@ export default function GameBoard({
         <StatusMessage
           status={status}
           events={events}
+          notice={notice}
           perspective={perspective}
         />
 
@@ -116,6 +124,7 @@ export default function GameBoard({
           capturableKeys={capturableKeys}
           currentPlayer={shownPlayer}
           neutralizedKeys={neutralizedKeys}
+          tileClassName={tileClassName}
           onSelect={onSelect}
         />
 
@@ -123,13 +132,15 @@ export default function GameBoard({
           <WordDisplay word={word} isValid={showPlayed || selectedIsValid} />
         </div>
 
-        <Button
-          className="w-full shrink-0"
-          onClick={onSubmit}
-          disabled={!canPlay || !selectedIsValid}
-        >
-          SUBMIT
-        </Button>
+        {footer ?? (
+          <Button
+            className="w-full shrink-0"
+            onClick={onSubmit}
+            disabled={!canPlay || !selectedIsValid}
+          >
+            SUBMIT
+          </Button>
+        )}
       </div>
     </div>
   );

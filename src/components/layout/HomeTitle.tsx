@@ -21,11 +21,13 @@ export default function HomeTitle() {
         <Image
           src={logoBlack}
           alt=""
+          loading="eager"
           className="h-6 w-auto in-data-[theme=dark]:hidden sm:h-8 lg:h-9"
         />
         <Image
           src={logoWhite}
           alt=""
+          loading="eager"
           className="hidden h-6 w-auto in-data-[theme=dark]:block sm:h-8 lg:h-9"
         />
       </Link>
