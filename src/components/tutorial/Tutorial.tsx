@@ -20,6 +20,8 @@ import { getGameResult } from "@/game/grid";
 import { coordToKey, getTile } from "@/game/hex";
 import { Perspective } from "@/game/names";
 
+import { useTutorialDone } from "@/lib/tutorialProgress";
+
 import { HexCoord, HexTileData } from "@/types/HexTile";
 
 const PERSPECTIVE: Perspective = { kind: "bot", bot: 2 };
@@ -40,6 +42,7 @@ export default function Tutorial() {
   const [explained, setExplained] = useState(0);
   const [nudge, setNudge] = useState(false);
   const [played, setPlayed] = useState<PlayedWord>();
+  const [, setTutorialDone] = useTutorialDone();
 
   const current = PAGES[page];
   const info = current && !isStep(current) ? current : undefined;
@@ -104,6 +107,10 @@ export default function Tutorial() {
   };
 
   useEffect(() => {
+    if (gameOver) setTutorialDone(true);
+  }, [gameOver, setTutorialDone]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.key === "ArrowRight" && popup && !atEnd) goNext();
@@ -120,8 +127,8 @@ export default function Tutorial() {
       if (!onTile && event.target.closest("button, a, input") !== null) return;
       goNext();
     };
-    window.addEventListener("click", onClick);
-    return () => window.removeEventListener("click", onClick);
+    window.addEventListener("click", onClick, true);
+    return () => window.removeEventListener("click", onClick, true);
   });
 
   useEffect(() => {
