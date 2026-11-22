@@ -20,6 +20,8 @@ import { getGameResult } from "@/game/grid";
 import { coordToKey, getTile } from "@/game/hex";
 import { Perspective } from "@/game/names";
 
+import { useSounds } from "@/hooks/useSounds";
+
 import { useTutorialDone } from "@/lib/tutorialProgress";
 
 import { HexCoord, HexTileData } from "@/types/HexTile";
@@ -50,6 +52,7 @@ export default function Tutorial({ onShowRules }: TutorialProps) {
   const [played, setPlayed] = useState<PlayedWord>();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [, setTutorialDone] = useTutorialDone();
+  const playSound = useSounds();
 
   const current = PAGES[page];
   const info = current && !isStep(current) ? current : undefined;
@@ -119,12 +122,12 @@ export default function Tutorial({ onShowRules }: TutorialProps) {
 
   useEffect(() => {
     if (!gameOver) return;
-    const timer = setTimeout(
-      () => setDialogOpen(true),
-      COMPLETE_DIALOG_DELAY_MS,
-    );
+    const timer = setTimeout(() => {
+      setDialogOpen(true);
+      playSound("over");
+    }, COMPLETE_DIALOG_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [gameOver]);
+  }, [gameOver, playSound]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -185,6 +188,7 @@ export default function Tutorial({ onShowRules }: TutorialProps) {
     if (!target) return;
 
     if (coordToKey(coord) === coordToKey(target)) {
+      playSound("select", tapped);
       setNudge(false);
       setTapped(tapped + 1);
     } else if (getTile(grid, coord)?.status === "neutral") {
@@ -195,6 +199,7 @@ export default function Tutorial({ onShowRules }: TutorialProps) {
   const handleSubmit = (): void => {
     if (!readyToSubmit) return;
 
+    playSound("play");
     setPlayed({
       player: TUTORIAL_PLAYER,
       word: pathWord(grid, path),
