@@ -152,7 +152,7 @@ export const PAGES: Page[] = [
         ],
       },
     ],
-    ready: "Press SUBMIT.",
+    ready: "Press SUBMIT",
     success: "Captured!",
     prepare: (grid) => grid,
   },

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import GameBoard, { type PlayedWord } from "@/components/game/GameBoard";
-import GameOverDialog from "@/components/game/GameOverDialog";
 import Callout from "@/components/tutorial/Callout";
+import CompleteDialog from "@/components/tutorial/CompleteDialog";
 import {
   gridAfterPage,
   gridForPage,
@@ -38,6 +38,8 @@ const SWIPE_MIN_PX = 50;
 
 const SWIPE_MAX_MS = 600;
 
+const COMPLETE_DIALOG_DELAY_MS = 1000;
+
 export default function Tutorial({ onShowRules }: TutorialProps) {
   const [page, setPage] = useState(0);
   const [grid, setGrid] = useState(() => gridForPage(0));
@@ -46,6 +48,7 @@ export default function Tutorial({ onShowRules }: TutorialProps) {
   const [explained, setExplained] = useState(0);
   const [nudge, setNudge] = useState(false);
   const [played, setPlayed] = useState<PlayedWord>();
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [, setTutorialDone] = useTutorialDone();
 
   const current = PAGES[page];
@@ -113,6 +116,15 @@ export default function Tutorial({ onShowRules }: TutorialProps) {
   useEffect(() => {
     if (gameOver) setTutorialDone(true);
   }, [gameOver, setTutorialDone]);
+
+  useEffect(() => {
+    if (!gameOver) return;
+    const timer = setTimeout(
+      () => setDialogOpen(true),
+      COMPLETE_DIALOG_DELAY_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [gameOver]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -225,7 +237,9 @@ export default function Tutorial({ onShowRules }: TutorialProps) {
   );
 
   const controls = (
-    <div className="flex w-full shrink-0 gap-2">
+    <div
+      className={`flex w-full shrink-0 gap-2 transition-[opacity,visibility] duration-300 motion-reduce:transition-none ${dialogOpen ? "invisible opacity-0" : ""}`}
+    >
       {page > 0 && (
         <Button variant="secondary" className="w-24 shrink-0" onClick={goBack}>
           BACK
@@ -272,15 +286,11 @@ export default function Tutorial({ onShowRules }: TutorialProps) {
           onBack={page > 0 ? goBack : undefined}
         />
       )}
-      {gameOver && result.over && (
-        <GameOverDialog winner={result.winner} perspective={PERSPECTIVE}>
-          <Link href="/" autoFocus className={buttonClass()}>
-            BACK TO MENU
-          </Link>
-          <Button variant="secondary" onClick={onShowRules}>
-            READ THE RULES
-          </Button>
-        </GameOverDialog>
+      {dialogOpen && (
+        <CompleteDialog
+          onShowRules={onShowRules}
+          onClose={() => setDialogOpen(false)}
+        />
       )}
     </>
   );
