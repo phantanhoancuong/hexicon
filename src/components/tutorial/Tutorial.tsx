@@ -24,6 +24,10 @@ import { useTutorialDone } from "@/lib/tutorialProgress";
 
 import { HexCoord, HexTileData } from "@/types/HexTile";
 
+type TutorialProps = {
+  onShowRules: () => void;
+};
+
 const PERSPECTIVE: Perspective = { kind: "bot", bot: 2 };
 
 const STEP_COUNT = PAGES.filter(isStep).length;
@@ -34,7 +38,7 @@ const SWIPE_MIN_PX = 50;
 
 const SWIPE_MAX_MS = 600;
 
-export default function Tutorial() {
+export default function Tutorial({ onShowRules }: TutorialProps) {
   const [page, setPage] = useState(0);
   const [grid, setGrid] = useState(() => gridForPage(0));
   const [tapped, setTapped] = useState(0);
@@ -273,6 +277,9 @@ export default function Tutorial() {
           <Link href="/" autoFocus className={buttonClass()}>
             BACK TO MENU
           </Link>
+          <Button variant="secondary" onClick={onShowRules}>
+            READ THE RULES
+          </Button>
         </GameOverDialog>
       )}
     </>
