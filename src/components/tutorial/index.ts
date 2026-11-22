@@ -1,1 +1,1 @@
-export { default as Tutorial } from "@/components/tutorial/Tutorial";
+export { default as HowToPlay } from "@/components/tutorial/HowToPlay";

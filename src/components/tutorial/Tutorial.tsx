@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import GameBoard, { type PlayedWord } from "@/components/game/GameBoard";
-import GameOverDialog from "@/components/game/GameOverDialog";
 import Callout from "@/components/tutorial/Callout";
+import CompleteDialog from "@/components/tutorial/CompleteDialog";
 import {
   gridAfterPage,
   gridForPage,
@@ -20,7 +20,15 @@ import { getGameResult } from "@/game/grid";
 import { coordToKey, getTile } from "@/game/hex";
 import { Perspective } from "@/game/names";
 
+import { useSounds } from "@/hooks/useSounds";
+
+import { useTutorialDone } from "@/lib/tutorialProgress";
+
 import { HexCoord, HexTileData } from "@/types/HexTile";
+
+type TutorialProps = {
+  onShowRules: () => void;
+};
 
 const PERSPECTIVE: Perspective = { kind: "bot", bot: 2 };
 
@@ -32,7 +40,9 @@ const SWIPE_MIN_PX = 50;
 
 const SWIPE_MAX_MS = 600;
 
-export default function Tutorial() {
+const COMPLETE_DIALOG_DELAY_MS = 1000;
+
+export default function Tutorial({ onShowRules }: TutorialProps) {
   const [page, setPage] = useState(0);
   const [grid, setGrid] = useState(() => gridForPage(0));
   const [tapped, setTapped] = useState(0);
@@ -40,6 +50,9 @@ export default function Tutorial() {
   const [explained, setExplained] = useState(0);
   const [nudge, setNudge] = useState(false);
   const [played, setPlayed] = useState<PlayedWord>();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [, setTutorialDone] = useTutorialDone();
+  const playSound = useSounds();
 
   const current = PAGES[page];
   const info = current && !isStep(current) ? current : undefined;
@@ -104,6 +117,19 @@ export default function Tutorial() {
   };
 
   useEffect(() => {
+    if (gameOver) setTutorialDone(true);
+  }, [gameOver, setTutorialDone]);
+
+  useEffect(() => {
+    if (!gameOver) return;
+    const timer = setTimeout(() => {
+      setDialogOpen(true);
+      playSound("over");
+    }, COMPLETE_DIALOG_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [gameOver, playSound]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.key === "ArrowRight" && popup && !atEnd) goNext();
@@ -162,6 +188,7 @@ export default function Tutorial() {
     if (!target) return;
 
     if (coordToKey(coord) === coordToKey(target)) {
+      playSound("select", tapped);
       setNudge(false);
       setTapped(tapped + 1);
     } else if (getTile(grid, coord)?.status === "neutral") {
@@ -172,6 +199,7 @@ export default function Tutorial() {
   const handleSubmit = (): void => {
     if (!readyToSubmit) return;
 
+    playSound("play");
     setPlayed({
       player: TUTORIAL_PLAYER,
       word: pathWord(grid, path),
@@ -214,7 +242,9 @@ export default function Tutorial() {
   );
 
   const controls = (
-    <div className="flex w-full shrink-0 gap-2">
+    <div
+      className={`flex w-full shrink-0 gap-2 transition-[opacity,visibility] duration-300 motion-reduce:transition-none ${dialogOpen ? "invisible opacity-0" : ""}`}
+    >
       {page > 0 && (
         <Button variant="secondary" className="w-24 shrink-0" onClick={goBack}>
           BACK
@@ -261,12 +291,11 @@ export default function Tutorial() {
           onBack={page > 0 ? goBack : undefined}
         />
       )}
-      {gameOver && result.over && (
-        <GameOverDialog winner={result.winner} perspective={PERSPECTIVE}>
-          <Link href="/" autoFocus className={buttonClass()}>
-            BACK TO MENU
-          </Link>
-        </GameOverDialog>
+      {dialogOpen && (
+        <CompleteDialog
+          onShowRules={onShowRules}
+          onClose={() => setDialogOpen(false)}
+        />
       )}
     </>
   );

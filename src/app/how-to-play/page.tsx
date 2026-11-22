@@ -1,5 +1,5 @@
-import { Tutorial } from "@/components/tutorial";
+import { HowToPlay } from "@/components/tutorial";
 
-export default function HowToPlay() {
-  return <Tutorial />;
+export default function HowToPlayPage() {
+  return <HowToPlay />;
 }
