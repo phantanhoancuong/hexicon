@@ -6,3 +6,5 @@ export const useTutorialDone = createSetting<boolean>(
   false,
   isBoolean,
 );
+
+export const useHelpSeen = createSetting<boolean>("helpSeen", false, isBoolean);
