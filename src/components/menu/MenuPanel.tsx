@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import AlternateOption from "@/components/menu/AlternateOption";
 import AutoFlipSwitch from "@/components/menu/AutoFlipSwitch";
 import CreateRoomButton from "@/components/menu/CreateRoomButton";
 import DifficultySelect from "@/components/menu/DifficultySelect";
+import FirstTimePrompt from "@/components/menu/FirstTimePrompt";
 import JoinRoom from "@/components/menu/JoinRoom";
 
 import { buttonClass, Icon } from "@/components/ui";
@@ -17,6 +18,7 @@ import type { Mode } from "@/game/mode";
 import { useMounted } from "@/hooks/useMounted";
 
 import { useMode } from "@/lib/settings";
+import { useHelpSeen } from "@/lib/tutorialProgress";
 
 const MODE_BUTTONS: {
   mode: Mode;
@@ -51,6 +53,8 @@ const MODE_BUTTONS: {
 
 export default function MenuPanel() {
   const [mode, setMode] = useMode();
+  const [helpSeen] = useHelpSeen();
+  const [prompting, setPrompting] = useState(false);
   const mounted = useMounted();
 
   return (
@@ -106,6 +110,11 @@ export default function MenuPanel() {
           <div className="flex flex-col gap-2">
             <Link
               href={`/play/${mode}`}
+              onClick={(event) => {
+                if (helpSeen) return;
+                event.preventDefault();
+                setPrompting(true);
+              }}
               className={buttonClass({ size: "lg", className: "w-full" })}
             >
               START
@@ -114,6 +123,13 @@ export default function MenuPanel() {
           </div>
         )}
       </div>
+
+      {prompting && (
+        <FirstTimePrompt
+          startHref={`/play/${mode}`}
+          onClose={() => setPrompting(false)}
+        />
+      )}
     </div>
   );
 }
