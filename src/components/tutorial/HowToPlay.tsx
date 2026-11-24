@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Rules from "@/components/tutorial/Rules";
 import Tutorial from "@/components/tutorial/Tutorial";
 import { SegmentedControl } from "@/components/ui";
+
+import { useMounted } from "@/hooks/useMounted";
+
+import { useHelpSeen, useTutorialDone } from "@/lib/tutorialProgress";
 
 type View = "tutorial" | "rules";
 
@@ -14,7 +18,22 @@ const OPTIONS: readonly { value: View; label: string }[] = [
 ];
 
 export default function HowToPlay() {
-  const [view, setView] = useState<View>("tutorial");
+  const mounted = useMounted();
+  const [tutorialDone] = useTutorialDone();
+  const [, setHelpSeen] = useHelpSeen();
+  const [view, setView] = useState<View>();
+
+  useEffect(() => {
+    setHelpSeen(true);
+  }, [setHelpSeen]);
+
+  useEffect(() => {
+    if (mounted && view === undefined) {
+      setView(tutorialDone ? "rules" : "tutorial");
+    }
+  }, [mounted, tutorialDone, view]);
+
+  if (view === undefined) return null;
 
   return (
     <div className="flex h-full w-full max-w-xl flex-col items-center gap-2">

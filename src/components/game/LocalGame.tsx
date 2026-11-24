@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import AutoFlipPrompt from "@/components/game/AutoFlipPrompt";
 import GameBoard from "@/components/game/GameBoard";
@@ -25,6 +25,7 @@ import { useNoticeEvents } from "@/hooks/useNoticeEvents";
 import { useSounds } from "@/hooks/useSounds";
 
 import { useAlternate, useDifficulty, useFlip } from "@/lib/settings";
+import { useHelpSeen } from "@/lib/tutorialProgress";
 
 import { GameState, PassReason } from "@/types/GameState";
 import { HexCoord, Player } from "@/types/HexTile";
@@ -46,6 +47,7 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
   const [flip, setFlip] = useFlip();
   const [alternate] = useAlternate(botPlayer === undefined ? "local" : "bot");
   const [difficulty] = useDifficulty();
+  const [, setHelpSeen] = useHelpSeen();
   const mounted = useMounted();
   const play = useSounds();
 
@@ -58,6 +60,10 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
   const promptOpen = mounted && flip === null && botPlayer === undefined;
   const isFlipped =
     flip === true && botPlayer === undefined && currentPlayer === PLAYERS[1];
+
+  useEffect(() => {
+    setHelpSeen(true);
+  }, [setHelpSeen]);
 
   // Letters are dealt once the word list is ready.
   if (dictionary && dealtFor !== dictionary) {
