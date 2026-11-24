@@ -17,6 +17,8 @@ import { useNoticeEvents } from "@/hooks/useNoticeEvents";
 import type { GameView, RoomView } from "@/hooks/useOnlineRoom";
 import { useSounds } from "@/hooks/useSounds";
 
+import { useHelpSeen } from "@/lib/tutorialProgress";
+
 import { HexCoord } from "@/types/HexTile";
 
 type OnlineGameProps = {
@@ -59,6 +61,7 @@ export default function OnlineGame({
   const { status, isValidWord } = useDictionary();
   const secondsLeft = useDeadlineCountdown(turnEndsAt, TURN_SECONDS);
   const play = useSounds();
+  const [, setHelpSeen] = useHelpSeen();
   const soundedTurn = useRef(turn);
 
   const playedEvent = events.find((event) => event.type === "played");
@@ -79,6 +82,10 @@ export default function OnlineGame({
     setSelectedKeys(new Set());
     setEvents(state.events);
   }
+
+  useEffect(() => {
+    setHelpSeen(true);
+  }, [setHelpSeen]);
 
   useEffect(() => {
     if (soundedTurn.current === turn) return;
