@@ -6,7 +6,6 @@ import GameBoard, { type PlayedWord } from "@/components/game/GameBoard";
 import GameOverDialog from "@/components/game/GameOverDialog";
 import { Button } from "@/components/ui";
 
-import { TURN_SECONDS } from "@/game/constants";
 import { getGameResult, isSelectable } from "@/game/grid";
 import { coordToKey, getTile } from "@/game/hex";
 import { Perspective } from "@/game/names";
@@ -59,7 +58,7 @@ export default function OnlineGame({
   const [shownTurn, setShownTurn] = useState(turn);
   const [events, setEvents] = useNoticeEvents();
   const { status, isValidWord } = useDictionary();
-  const secondsLeft = useDeadlineCountdown(turnEndsAt, TURN_SECONDS);
+  const secondsLeft = useDeadlineCountdown(turnEndsAt, room.turnSeconds);
   const play = useSounds();
   const [, setHelpSeen] = useHelpSeen();
   const soundedTurn = useRef(turn);
