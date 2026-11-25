@@ -1,6 +1,8 @@
 import type { Connection, WSMessage } from "partyserver";
 import { Server } from "partyserver";
 
+import type { TurnSeconds } from "@/game/constants";
+
 import { CLOSE_REPLACED } from "@/online/closeCodes";
 import { parseClientMessage } from "@/online/parseClientMessage";
 
@@ -14,12 +16,14 @@ import {
   CLAIM_PATH,
   CREATED_KEY,
   DEFAULT_ALTERNATE,
+  DEFAULT_TURN_SECONDS,
   EMPTY_ROOM_SECONDS,
   GAME_KEY,
   MAX_PLAYERS,
   SIDES_KEY,
   TOKENS_KEY,
-  TURN_MS,
+  TURN_SECONDS_KEY,
+  turnMsFor,
 } from "@server/constants";
 import { getDictionary } from "@server/dictionary";
 import type { Sides } from "@server/room/lobby";
@@ -33,6 +37,7 @@ import {
   playMove,
   selectableKeys,
   startGame,
+  turnMsOf,
 } from "@server/room/turn";
 
 export type Env = { Main: DurableObjectNamespace<Room> };
@@ -80,7 +85,12 @@ export class Room extends Server<Env> {
 
     switch (parsed.type) {
       case "join":
-        await this.join(connection, parsed.token, parsed.alternate);
+        await this.join(
+          connection,
+          parsed.token,
+          parsed.alternate,
+          parsed.turnSeconds,
+        );
         return;
       case "choose-side":
         await this.chooseSide(connection, parsed.side);
@@ -90,6 +100,9 @@ export class Room extends Server<Env> {
         return;
       case "set-alternate":
         await this.setAlternate(connection, parsed.alternate);
+        return;
+      case "set-turn-seconds":
+        await this.setTurnSeconds(connection, parsed.turnSeconds);
         return;
       case "leave":
         await this.leave(connection);
@@ -149,11 +162,13 @@ export class Room extends Server<Env> {
    * @param connection - The connection that sent `join`.
    * @param token - The token from an earlier `welcome`, or `null` for a new player.
    * @param alternate - The player's ALTERNATE FIRST TURN setting if the client sent one. Used only for the first player in the room to set the room's setting.
+   * @param turnSeconds - The player's turn time if the client sent one. Used only for the first player in the room to set the room's setting.
    */
   private async join(
     connection: Connection,
     token: string | null,
     alternate?: boolean,
+    turnSeconds?: TurnSeconds,
   ) {
     if (tokenOf(connection) !== null) {
       send(connection, { type: "error", reason: "invalid-message" });
@@ -179,6 +194,8 @@ export class Room extends Server<Env> {
       await this.ctx.storage.put(TOKENS_KEY, tokens);
       if (firstPlayer && alternate !== undefined)
         await this.ctx.storage.put(ALTERNATE_KEY, alternate);
+      if (firstPlayer && turnSeconds !== undefined)
+        await this.ctx.storage.put(TURN_SECONDS_KEY, turnSeconds);
     }
 
     const roomWasEmpty = !Array.from(this.getConnections()).some(
@@ -203,7 +220,7 @@ export class Room extends Server<Env> {
 
     const current =
       roomWasEmpty && isRunning(game)
-        ? { ...game, turnEndsAt: Date.now() + TURN_MS }
+        ? { ...game, turnEndsAt: Date.now() + turnMsOf(game) }
         : game;
     if (current !== game) await this.putGame(current);
     else await this.armTurnTimer(current);
@@ -293,6 +310,7 @@ export class Room extends Server<Env> {
         previous,
         getDictionary(),
         await this.getAlternate(),
+        turnMsFor(await this.getTurnSeconds()),
         Date.now(),
       ),
     );
@@ -319,6 +337,40 @@ export class Room extends Server<Env> {
     const changes = alternate !== (await this.getAlternate());
     if (changes && !isReady(connection) && !isRunning(await this.getGame())) {
       await this.ctx.storage.put(ALTERNATE_KEY, alternate);
+
+      for (const other of this.getConnections()) {
+        const token = tokenOf(other);
+        if (token !== null)
+          other.setState({ token, ready: false } satisfies ConnectionState);
+      }
+    }
+
+    await this.broadcastRoom();
+  }
+
+  /**
+   * Sets how long a turn lasts.
+   *
+   * Changing the value is refused during a game or while the player is ready.
+   *
+   * Changing the value successfully will unready every player in the room.
+   *
+   * @param connection - The connection that sent `set-turn-seconds`.
+   * @param turnSeconds - The new turn time, in seconds.
+   */
+  private async setTurnSeconds(
+    connection: Connection,
+    turnSeconds: TurnSeconds,
+  ) {
+    const own = tokenOf(connection);
+    if (own === null) {
+      send(connection, { type: "error", reason: "invalid-message" });
+      return;
+    }
+
+    const changes = turnSeconds !== (await this.getTurnSeconds());
+    if (changes && !isReady(connection) && !isRunning(await this.getGame())) {
+      await this.ctx.storage.put(TURN_SECONDS_KEY, turnSeconds);
 
       for (const other of this.getConnections()) {
         const token = tokenOf(other);
@@ -426,6 +478,7 @@ export class Room extends Server<Env> {
     const sides = await this.getSides();
     const inGame = (await this.getGame()) !== null;
     const alternate = await this.getAlternate();
+    const turnSeconds = await this.getTurnSeconds();
     const connected = new Set<string>();
     const ready = new Set<string>();
 
@@ -457,6 +510,7 @@ export class Room extends Server<Env> {
         opponent,
         inGame,
         alternate,
+        turnSeconds,
       });
     }
   }
@@ -538,6 +592,14 @@ export class Room extends Server<Env> {
   private async getAlternate(): Promise<boolean> {
     return (
       (await this.ctx.storage.get<boolean>(ALTERNATE_KEY)) ?? DEFAULT_ALTERNATE
+    );
+  }
+
+  /** How long a turn lasts, in seconds. */
+  private async getTurnSeconds(): Promise<TurnSeconds> {
+    return (
+      (await this.ctx.storage.get<TurnSeconds>(TURN_SECONDS_KEY)) ??
+      DEFAULT_TURN_SECONDS
     );
   }
 

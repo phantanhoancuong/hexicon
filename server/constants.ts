@@ -25,5 +25,10 @@ export const CLAIM_PATH = "/claim";
 /** How long a room is maintained before its storage is deleted when nobody is connected. */
 export const EMPTY_ROOM_SECONDS = 600;
 
-/** How long a turn lasts, including the pause before the clock runs. */
-export const TURN_MS = TURN_PAUSE_MS + TURN_SECONDS * 1000;
+export const TURN_SECONDS_KEY = "turnSeconds";
+export const DEFAULT_TURN_SECONDS = TURN_SECONDS;
+
+export const turnMsFor = (turnSeconds: number): number =>
+  TURN_PAUSE_MS + turnSeconds * 1000;
+
+export const TURN_MS = turnMsFor(TURN_SECONDS);

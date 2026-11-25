@@ -15,12 +15,28 @@ export type StoredGame = {
 
   /** When the current turn runs out, in milliseconds. `null` once the game is over. */
   turnEndsAt: number | null;
+
+  /** How long each turn of this game lasts, in milliseconds. */
+  turnMs?: number;
 };
 
+/**
+ * Gets how long each turn of a game lasts.
+ *
+ * @param game - The game.
+ * @returns The turn length in milliseconds.
+ */
+export const turnMsOf = (game: StoredGame): number => game.turnMs ?? TURN_MS;
+
 /** Wraps a state with the time its turn runs out, or with no time if the game is over. */
-const withTurnClock = (state: GameState, now: number): StoredGame => ({
+const withTurnClock = (
+  state: GameState,
+  now: number,
+  turnMs: number,
+): StoredGame => ({
   state,
-  turnEndsAt: getGameResult(state.grid).over ? null : now + TURN_MS,
+  turnEndsAt: getGameResult(state.grid).over ? null : now + turnMs,
+  turnMs,
 });
 
 /**
@@ -41,6 +57,7 @@ export const isRunning = (game: StoredGame | null): boolean =>
  * @param previous - The game that has finished in this room, or `null` if there is none.
  * @param dictionary - Used to deal letters.
  * @param alternate - Whether the player who goes first alternates between matches. If not the same player starts again.
+ * @param turnMs - How long each turn lasts, in milliseconds.
  * @param now - The time now, in milliseconds.
  * @returns The new game.
  */
@@ -48,6 +65,7 @@ export const startGame = (
   previous: StoredGame | null,
   dictionary: Dictionary,
   alternate: boolean,
+  turnMs: number,
   now: number,
 ): StoredGame =>
   withTurnClock(
@@ -55,6 +73,7 @@ export const startGame = (
       ? dealState(createGameState(PLAYERS[0]), dictionary)
       : nextGame(previous.state, dictionary, alternate),
     now,
+    turnMs,
   );
 
 /**
@@ -88,7 +107,7 @@ export const playMove = (
   now: number,
 ): StoredGame | null => {
   const result = applyMove(game.state, move, dictionary);
-  return result.ok ? withTurnClock(result.state, now) : null;
+  return result.ok ? withTurnClock(result.state, now, turnMsOf(game)) : null;
 };
 
 /**

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui";
 
 import { chooseMove } from "@/game/bot";
 import { PROFILES } from "@/game/botProfiles";
-import { PLAYERS, TURN_PAUSE_MS, TURN_SECONDS } from "@/game/constants";
+import { PLAYERS, TURN_PAUSE_MS } from "@/game/constants";
 
 import { Dictionary } from "@/game/dictionary";
 import { applyMove, createGameState, dealState, nextGame } from "@/game/game";
@@ -24,7 +24,12 @@ import { useMounted } from "@/hooks/useMounted";
 import { useNoticeEvents } from "@/hooks/useNoticeEvents";
 import { useSounds } from "@/hooks/useSounds";
 
-import { useAlternate, useDifficulty, useFlip } from "@/lib/settings";
+import {
+  useAlternate,
+  useDifficulty,
+  useFlip,
+  useTurnSeconds,
+} from "@/lib/settings";
 import { useHelpSeen } from "@/lib/tutorialProgress";
 
 import { GameState, PassReason } from "@/types/GameState";
@@ -47,6 +52,9 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
   const [flip, setFlip] = useFlip();
   const [alternate] = useAlternate(botPlayer === undefined ? "local" : "bot");
   const [difficulty] = useDifficulty();
+  const [turnSeconds] = useTurnSeconds(
+    botPlayer === undefined ? "local" : "bot",
+  );
   const [, setHelpSeen] = useHelpSeen();
   const mounted = useMounted();
   const play = useSounds();
@@ -132,7 +140,7 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
 
   const secondsLeft = useCountdown({
     running: status === "ready" && !result.over && !promptOpen,
-    durationSeconds: TURN_SECONDS,
+    durationSeconds: turnSeconds,
     startDelayMs: TURN_PAUSE_MS,
     resetKey: turn,
     onExpire: () => handlePass(),

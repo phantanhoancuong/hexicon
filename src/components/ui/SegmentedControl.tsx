@@ -4,21 +4,25 @@ import { useId } from "react";
 
 import Badge from "@/components/ui/Badge";
 
-type SegmentedControlProps<T extends string> = {
+type SegmentedControlProps<T extends string | number> = {
   label: string;
   badge?: string;
   description?: string;
   card?: boolean;
+  inline?: boolean;
+  disabled?: boolean;
   options: readonly { value: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
 };
 
-export default function SegmentedControl<T extends string>({
+export default function SegmentedControl<T extends string | number>({
   label,
   badge,
   description,
   card = false,
+  inline = false,
+  disabled,
   options,
   value,
   onChange,
@@ -27,8 +31,12 @@ export default function SegmentedControl<T extends string>({
 
   return (
     <div
-      className={`flex w-full flex-col ${
-        card ? "gap-3 rounded-md bg-foreground/10 p-3" : "gap-1.5"
+      className={`flex w-full ${
+        inline
+          ? "min-h-14 items-center justify-between gap-4 rounded-md border border-border bg-surface px-4"
+          : card
+            ? "flex-col gap-3 rounded-md bg-foreground/10 p-3"
+            : "flex-col gap-1.5"
       }`}
     >
       <div className="flex flex-col gap-0.5">
@@ -36,9 +44,11 @@ export default function SegmentedControl<T extends string>({
           <span
             id={headingId}
             className={
-              card
-                ? "text-sm font-semibold tracking-wide"
-                : "text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+              inline
+                ? "font-semibold"
+                : card
+                  ? "text-sm font-semibold tracking-wide"
+                  : "text-xs font-semibold tracking-wide text-muted-foreground uppercase"
             }
           >
             {label}
@@ -55,7 +65,9 @@ export default function SegmentedControl<T extends string>({
       <div
         role="group"
         aria-labelledby={headingId}
-        className="flex w-full gap-1 rounded-md bg-foreground/10 p-1"
+        className={`flex gap-1 rounded-md bg-foreground/10 p-1 ${
+          inline ? "" : "w-full"
+        }`}
       >
         {options.map((option) => {
           const isSelected = option.value === value;
@@ -64,11 +76,12 @@ export default function SegmentedControl<T extends string>({
               key={option.value}
               type="button"
               aria-pressed={isSelected}
+              disabled={disabled}
               onClick={() => onChange(option.value)}
-              className={`h-8 flex-1 cursor-pointer rounded text-xs font-semibold tracking-wide uppercase transition-colors motion-reduce:transition-none ${
+              className={`h-8 ${inline ? "px-3" : "flex-1"} cursor-pointer rounded text-xs font-semibold tracking-wide uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none ${
                 isSelected
                   ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+                  : "text-muted-foreground enabled:hover:bg-foreground/10 enabled:hover:text-foreground"
               }`}
             >
               {option.label}

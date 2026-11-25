@@ -55,7 +55,7 @@ export const LETTER_POOL = Object.entries(LETTER_COUNTS)
   .join("");
 
 /** How long a player has for a turn. */
-export const TURN_SECONDS = 60;
+export const TURN_SECONDS = 90;
 
 /** How long a notice stays on screen. */
 export const NOTICE_MS = 4000;
@@ -72,3 +72,11 @@ export const BOT_TILE_MS = 450;
 
 /** How long the bot pauses on its finished word before submitting it. */
 export const BOT_SUBMIT_MS = 2000;
+
+export const TURN_SECONDS_OPTIONS = [60, 90, 120] as const;
+
+export type TurnSeconds = (typeof TURN_SECONDS_OPTIONS)[number];
+
+export const isTurnSeconds = (value: unknown): value is TurnSeconds =>
+  typeof value === "number" &&
+  TURN_SECONDS_OPTIONS.some((seconds) => seconds === value);

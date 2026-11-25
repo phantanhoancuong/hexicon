@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import PartySocket from "partysocket";
 
+import type { TurnSeconds } from "@/game/constants";
+
 import { getServerHost, isServerSecure } from "@/lib/online/server";
 import { clearSession, loadSession, saveSession } from "@/lib/online/session";
-import { useAlternate } from "@/lib/settings";
+import { useAlternate, useTurnSeconds } from "@/lib/settings";
 import { CLOSE_REPLACED } from "@/online/closeCodes";
 
 import type { GameState } from "@/types/GameState";
@@ -57,12 +59,15 @@ export const useOnlineRoom = (code: string | null) => {
   const [error, setError] = useState<OnlineError | null>(null);
   const [alternate] = useAlternate("online");
   const alternateRef = useRef(alternate);
+  const [turnSeconds] = useTurnSeconds("online");
+  const turnSecondsRef = useRef(turnSeconds);
   const controlsRef = useRef<Controls | null>(null);
 
   // Lets the socket read the latest rule when it reconnects, without restarting it.
   useEffect(() => {
     alternateRef.current = alternate;
-  }, [alternate]);
+    turnSecondsRef.current = turnSeconds;
+  }, [alternate, turnSeconds]);
 
   useEffect(() => {
     if (code === null) return;
@@ -100,7 +105,12 @@ export const useOnlineRoom = (code: string | null) => {
       if (stopped) return;
       const session = loadSession();
       const token = session?.code === code ? session.token : null;
-      sendMessage({ type: "join", token, alternate: alternateRef.current });
+      sendMessage({
+        type: "join",
+        token,
+        alternate: alternateRef.current,
+        turnSeconds: turnSecondsRef.current,
+      });
     });
 
     socket.addEventListener("message", (event) => {
@@ -178,6 +188,10 @@ export const useOnlineRoom = (code: string | null) => {
     controlsRef.current?.send({ type: "set-alternate", alternate: value });
   }, []);
 
+  const setTurnSeconds = useCallback((value: TurnSeconds) => {
+    controlsRef.current?.send({ type: "set-turn-seconds", turnSeconds: value });
+  }, []);
+
   const submit = useCallback((keys: string[]) => {
     controlsRef.current?.send({ type: "submit", keys });
   }, []);
@@ -199,6 +213,7 @@ export const useOnlineRoom = (code: string | null) => {
     chooseSide,
     setReady,
     setAlternate,
+    setTurnSeconds,
     submit,
     select,
     leave,

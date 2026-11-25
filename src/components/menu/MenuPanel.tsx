@@ -9,6 +9,7 @@ import CreateRoomButton from "@/components/menu/CreateRoomButton";
 import DifficultySelect from "@/components/menu/DifficultySelect";
 import FirstTimePrompt from "@/components/menu/FirstTimePrompt";
 import JoinRoom from "@/components/menu/JoinRoom";
+import TurnTimeSelect from "@/components/menu/TurnTimeSelect";
 
 import { buttonClass, Icon } from "@/components/ui";
 import { globe, group, robot } from "@/icons";
@@ -33,6 +34,7 @@ const MODE_BUTTONS: {
     icon: group,
     options: (
       <>
+        <TurnTimeSelect mode="local" />
         <AutoFlipSwitch />
         <AlternateOption mode="local" />
       </>
@@ -45,6 +47,7 @@ const MODE_BUTTONS: {
     options: (
       <>
         <DifficultySelect />
+        <TurnTimeSelect mode="bot" />
         <AlternateOption mode="bot" />
       </>
     ),
