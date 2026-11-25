@@ -76,3 +76,7 @@ export const BOT_SUBMIT_MS = 2000;
 export const TURN_SECONDS_OPTIONS = [60, 90, 120] as const;
 
 export type TurnSeconds = (typeof TURN_SECONDS_OPTIONS)[number];
+
+export const isTurnSeconds = (value: unknown): value is TurnSeconds =>
+  typeof value === "number" &&
+  TURN_SECONDS_OPTIONS.some((seconds) => seconds === value);

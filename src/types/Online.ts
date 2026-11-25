@@ -1,3 +1,5 @@
+import { TurnSeconds } from "@/game/constants";
+
 import { GameState } from "@/types/GameState";
 import { Player } from "@/types/HexTile";
 
@@ -22,6 +24,7 @@ export type ClientMessage =
       type: "join";
       token: string | null;
       alternate?: boolean;
+      turnSeconds?: TurnSeconds;
     }
   /** The player selects a side, or unselects a side (`null`). */
   | { type: "choose-side"; side: Player | null }
@@ -33,6 +36,12 @@ export type ClientMessage =
    * This setting is applied to the entire room.
    */
   | { type: "set-alternate"; alternate: boolean }
+  /**
+   * The player sets the time a turn lasts.
+   *
+   * This setting is applied to the entire room.
+   */
+  | { type: "set-turn-seconds"; turnSeconds: TurnSeconds }
   /** The player leaves the room for good. */
   | { type: "leave" }
   /**
@@ -66,6 +75,8 @@ export type ServerMessage =
    * `inGame` is `true` when a game is being played.
    *
    * `alternate` is `true` if the player who goes first alternates between matches. This setting is shared by both players.
+   *
+   * `turnSeconds` is how long a turn lasts in seconds.
    */
   | {
       type: "room";
@@ -73,6 +84,7 @@ export type ServerMessage =
       opponent: PlayerInfo | null;
       inGame: boolean;
       alternate: boolean;
+      turnSeconds: TurnSeconds;
     }
   /** Current statae of the game, sent when the game starts, after a move, and when a player joins or reconnects during a game. */
   | {

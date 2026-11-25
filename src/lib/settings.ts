@@ -2,12 +2,12 @@ import { createSetting } from "@/lib/createSetting";
 import { isBoolean } from "@/lib/guards";
 
 import {
+  isTurnSeconds,
   TURN_SECONDS,
-  TURN_SECONDS_OPTIONS,
   type TurnSeconds,
 } from "@/game/constants";
 import { DIFFICULTIES, Difficulty } from "@/game/difficulty";
-import { MODES, Mode } from "@/game/mode";
+import { Mode, MODES } from "@/game/mode";
 
 /**
  * Makes a version of `createSetting()` with scoped mode.
@@ -73,11 +73,7 @@ const alternateByMode = {
 /** If the first turn belongs to alternating players between matches. */
 export const useAlternate = (mode: AlternateMode) => alternateByMode[mode]();
 
-export type TimedMode = Exclude<Mode, "online">;
-
-const isTurnSeconds = (value: unknown): value is TurnSeconds =>
-  typeof value === "number" &&
-  TURN_SECONDS_OPTIONS.some((seconds) => seconds === value);
+export type TimedMode = Mode;
 
 const turnSecondsByMode = {
   local: createLocalSetting<TurnSeconds>(
@@ -86,6 +82,11 @@ const turnSecondsByMode = {
     isTurnSeconds,
   ),
   bot: createBotSetting<TurnSeconds>(
+    "turnSeconds",
+    TURN_SECONDS,
+    isTurnSeconds,
+  ),
+  online: createOnlineSetting<TurnSeconds>(
     "turnSeconds",
     TURN_SECONDS,
     isTurnSeconds,

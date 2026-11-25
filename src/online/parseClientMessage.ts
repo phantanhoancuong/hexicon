@@ -1,3 +1,5 @@
+import { isTurnSeconds } from "@/game/constants";
+
 import { isBoolean, isRecord } from "@/lib/guards";
 
 import { Player } from "@/types/HexTile";
@@ -39,16 +41,18 @@ export const parseClientMessage = (raw: string): ClientMessage | null => {
 
   switch (data.type) {
     case "join": {
-      const { token, alternate } = data;
+      const { token, alternate, turnSeconds } = data;
       if (alternate !== undefined && !isBoolean(alternate)) return null;
+      if (turnSeconds !== undefined && !isTurnSeconds(turnSeconds)) return null;
 
-      if (token === null) return { type: "join", token: null, alternate };
+      if (token === null)
+        return { type: "join", token: null, alternate, turnSeconds };
       if (
         typeof token === "string" &&
         token.length > 0 &&
         token.length <= MAX_TOKEN_LENGTH
       ) {
-        return { type: "join", token, alternate };
+        return { type: "join", token, alternate, turnSeconds };
       }
       return null;
     }
@@ -60,6 +64,12 @@ export const parseClientMessage = (raw: string): ClientMessage | null => {
     case "set-alternate": {
       const { alternate } = data;
       if (isBoolean(alternate)) return { type: "set-alternate", alternate };
+      return null;
+    }
+    case "set-turn-seconds": {
+      const { turnSeconds } = data;
+      if (isTurnSeconds(turnSeconds))
+        return { type: "set-turn-seconds", turnSeconds };
       return null;
     }
     case "set-ready": {
