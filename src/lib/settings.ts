@@ -30,12 +30,8 @@ const createLocalSetting = createModeSetting("local");
 const createBotSetting = createModeSetting("bot");
 const createOnlineSetting = createModeSetting("online");
 
-/** If the screen flips each turn in local play. `null` means the player has not chosen yet. */
-export const useFlip = createLocalSetting(
-  "flip",
-  null,
-  (value) => value === null || typeof value === "boolean",
-);
+/** If the screen flips each turn in local play. */
+export const useFlip = createLocalSetting("flip", false, isBoolean);
 
 /** The bot's difficulty. */
 export const useDifficulty = createBotSetting<Difficulty>(

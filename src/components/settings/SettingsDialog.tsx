@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import ColorPreview from "@/components/settings/ColorPreview";
 import {
   Button,
+  Dialog,
   Icon,
   SegmentedControl,
   Slider,
   Toggle,
 } from "@/components/ui";
-import { useDialogFade } from "@/hooks/useDialogFade";
 import { useThemeTransition } from "@/hooks/useThemeTransition";
 import { close, volumeHigh, volumeLow, volumeMuted } from "@/icons";
 import { useColorBlind, useVolume } from "@/lib/settings";
@@ -32,17 +32,10 @@ type SettingsDialogProps = {
 };
 
 export default function SettingsDialog({ onClose }: SettingsDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const [volume, setVolume] = useVolume();
   const { theme, setTheme } = useThemeTransition();
   const [colorBlind, setColorBlind] = useColorBlind();
-  const { visible, requestClose } = useDialogFade(onClose);
   const lastVolume = useRef(volume > 0 ? volume : FALLBACK_VOLUME);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog && !dialog.open) dialog.showModal();
-  });
 
   const handleVolumeChange = (next: number): void => {
     if (next > 0) lastVolume.current = next;
@@ -64,84 +57,82 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     THEMES.find(({ value }) => value === theme)?.value ?? "system";
 
   return (
-    <dialog
-      ref={dialogRef}
-      onCancel={(event) => {
-        event.preventDefault();
-        requestClose();
-      }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) requestClose();
-      }}
-      aria-labelledby="settings-title"
-      className={`m-auto w-[min(90vw,24rem)] rounded-md border border-border bg-background p-6 font-sans text-foreground shadow-md transition duration-150 backdrop:bg-black/50 backdrop:transition-opacity backdrop:duration-150 motion-reduce:transition-none motion-reduce:backdrop:transition-none ${
-        visible
-          ? "scale-100 opacity-100 backdrop:opacity-100"
-          : "pointer-events-none scale-95 opacity-0 backdrop:opacity-0"
-      }`}
+    <Dialog
+      labelledBy="settings-title"
+      onClose={onClose}
+      wide
+      className="gap-4"
     >
-      <div className="flex items-center justify-between">
-        <h2 id="settings-title" className="text-lg font-semibold">
-          Settings
-        </h2>
-        <button
-          type="button"
-          onClick={requestClose}
-          aria-label="Close settings"
-          className="-mr-1 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
-        >
-          <Icon src={close} className="size-6" />
-        </button>
-      </div>
-      <div className="mt-4 flex flex-col gap-3">
-        <Slider
-          label="VOLUME"
-          value={volume}
-          min={0}
-          max={100}
-          step={VOLUME_STEP}
-          format={(value) => (value === 0 ? "OFF" : `${value}%`)}
-          leading={
+      {(closeDialog) => (
+        <>
+          <div className="flex items-center justify-between">
+            <h2 id="settings-title" className="text-lg font-semibold">
+              Settings
+            </h2>
             <button
               type="button"
-              onClick={handleMuteToggle}
-              aria-pressed={muted}
-              aria-label="Mute"
-              className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-foreground hover:bg-foreground/10"
+              onClick={closeDialog}
+              aria-label="Close settings"
+              className="-mr-1 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
             >
-              <Icon
-                src={
-                  muted ? volumeMuted : volume <= 50 ? volumeLow : volumeHigh
-                }
-                className="size-6"
-              />
+              <Icon src={close} className="size-6" />
             </button>
-          }
-          onChange={handleVolumeChange}
-          onCommit={(value) => playSound("select", 0, value / 100)}
-        />
-        <SegmentedControl
-          card
-          label="THEME"
-          options={THEMES}
-          value={currentTheme}
-          onChange={setTheme}
-        />
-        <Toggle
-          label="COLOR-BLIND MODE"
-          description="Changes the tile colors to be easier to tell apart for color blind people."
-          checked={colorBlind}
-          onChange={setColorBlind}
-        />
-        <ColorPreview />
-      </div>
-      <Button
-        variant="secondary"
-        className="mt-5 w-full font-mono text-sm"
-        onClick={requestClose}
-      >
-        CLOSE
-      </Button>
-    </dialog>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Slider
+              label="VOLUME"
+              value={volume}
+              min={0}
+              max={100}
+              step={VOLUME_STEP}
+              format={(value) => (value === 0 ? "OFF" : `${value}%`)}
+              leading={
+                <button
+                  type="button"
+                  onClick={handleMuteToggle}
+                  aria-pressed={muted}
+                  aria-label="Mute"
+                  className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-foreground hover:bg-foreground/10"
+                >
+                  <Icon
+                    src={
+                      muted
+                        ? volumeMuted
+                        : volume <= 50
+                          ? volumeLow
+                          : volumeHigh
+                    }
+                    className="size-6"
+                  />
+                </button>
+              }
+              onChange={handleVolumeChange}
+              onCommit={(value) => playSound("select", 0, value / 100)}
+            />
+            <SegmentedControl
+              card
+              label="THEME"
+              options={THEMES}
+              value={currentTheme}
+              onChange={setTheme}
+            />
+            <Toggle
+              label="COLOR-BLIND MODE"
+              description="Changes the tile colors to be easier to tell apart for color blind people."
+              checked={colorBlind}
+              onChange={setColorBlind}
+            />
+            <ColorPreview />
+          </div>
+          <Button
+            variant="secondary"
+            className="w-full font-mono text-sm"
+            onClick={closeDialog}
+          >
+            CLOSE
+          </Button>
+        </>
+      )}
+    </Dialog>
   );
 }

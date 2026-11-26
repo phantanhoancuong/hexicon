@@ -16,7 +16,7 @@ export default function AutoFlipSwitch() {
     <Toggle
       label="AUTO FLIP"
       description="Flips the screen on player 2's turn."
-      checked={flip === true}
+      checked={flip}
       onChange={setFlip}
     />
   );

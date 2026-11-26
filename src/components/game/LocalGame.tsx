@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-import AutoFlipPrompt from "@/components/game/AutoFlipPrompt";
 import GameBoard from "@/components/game/GameBoard";
 import GameOverDialog from "@/components/game/GameOverDialog";
 import { Button } from "@/components/ui";
@@ -20,7 +19,6 @@ import { LOCAL, Perspective } from "@/game/names";
 import { useBotTurn } from "@/hooks/useBotTurn";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useDictionary } from "@/hooks/useDictionary";
-import { useMounted } from "@/hooks/useMounted";
 import { useNoticeEvents } from "@/hooks/useNoticeEvents";
 import { useSounds } from "@/hooks/useSounds";
 
@@ -49,14 +47,13 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
   const [dealtFor, setDealtFor] = useState<Dictionary | null>(null);
   const [events, setEvents] = useNoticeEvents();
   const { status, dictionary, isValidWord } = useDictionary();
-  const [flip, setFlip] = useFlip();
+  const [flip] = useFlip();
   const [alternate] = useAlternate(botPlayer === undefined ? "local" : "bot");
   const [difficulty] = useDifficulty();
   const [turnSeconds] = useTurnSeconds(
     botPlayer === undefined ? "local" : "bot",
   );
   const [, setHelpSeen] = useHelpSeen();
-  const mounted = useMounted();
   const play = useSounds();
 
   const { grid, turn, currentPlayer, wins } = state;
@@ -65,9 +62,8 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
     botPlayer === undefined ? LOCAL : { kind: "bot", bot: botPlayer };
   const isBotTurn =
     botPlayer === currentPlayer && status === "ready" && !result.over;
-  const promptOpen = mounted && flip === null && botPlayer === undefined;
   const isFlipped =
-    flip === true && botPlayer === undefined && currentPlayer === PLAYERS[1];
+    flip && botPlayer === undefined && currentPlayer === PLAYERS[1];
 
   useEffect(() => {
     setHelpSeen(true);
@@ -139,7 +135,7 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
   };
 
   const secondsLeft = useCountdown({
-    running: status === "ready" && !result.over && !promptOpen,
+    running: status === "ready" && !result.over,
     durationSeconds: turnSeconds,
     startDelayMs: TURN_PAUSE_MS,
     resetKey: turn,
@@ -194,8 +190,6 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
         onSelect={handleSelect}
         onSubmit={handleSubmit}
       />
-
-      {promptOpen && <AutoFlipPrompt onChoose={setFlip} />}
 
       {result.over && (
         <GameOverDialog winner={result.winner} perspective={perspective}>

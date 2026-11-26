@@ -11,11 +11,9 @@ import { useFlip } from "@/lib/settings";
  */
 export default function AutoFlipButton() {
   const pathname = usePathname();
-  const [flip, setFlip] = useFlip();
+  const [isOn, setFlip] = useFlip();
 
   if (pathname !== "/play/local") return null;
-
-  const isOn = flip === true;
 
   return (
     <button
