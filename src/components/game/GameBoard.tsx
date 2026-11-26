@@ -27,6 +27,8 @@ type GameBoardProps = {
   turn: number;
   /** Whole seconds left in the turn, or `null` when the clock is not running. */
   secondsLeft: number | null;
+  /** How long a turn lasts, in seconds. */
+  turnSeconds: number;
   /** Whether the word list is ready. */
   status: ComponentProps<typeof StatusMessage>["status"];
   /** Notices to show in the status line. */
@@ -62,6 +64,7 @@ export default function GameBoard({
   wins,
   turn,
   secondsLeft,
+  turnSeconds,
   status,
   events,
   perspective,
@@ -108,6 +111,7 @@ export default function GameBoard({
           currentPlayer={currentPlayer}
           turn={turn}
           secondsLeft={secondsLeft}
+          turnSeconds={turnSeconds}
           perspective={perspective}
         />
 

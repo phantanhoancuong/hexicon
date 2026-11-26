@@ -25,8 +25,11 @@ export default function TurnClock({
   secondsLeft,
   resetKey,
 }: TurnClockProps) {
+  const hasDuration = Number.isFinite(durationSeconds) && durationSeconds > 0;
   const isLow =
-    secondsLeft !== null && secondsLeft / durationSeconds < LOW_TIME_RATIO;
+    hasDuration &&
+    secondsLeft !== null &&
+    secondsLeft / durationSeconds < LOW_TIME_RATIO;
 
   return (
     <div
@@ -50,7 +53,7 @@ export default function TurnClock({
           key={resetKey}
           durationSeconds={durationSeconds}
           delayMs={delayMs}
-          running={secondsLeft !== null}
+          running={hasDuration && secondsLeft !== null}
           secondsLeft={secondsLeft}
           isLow={isLow}
         />

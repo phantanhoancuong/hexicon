@@ -1,7 +1,7 @@
 import PlayerTag from "@/components/game/PlayerTag";
 import TurnClock from "@/components/game/TurnClock";
 
-import { TURN_PAUSE_MS, TURN_SECONDS } from "@/game/constants";
+import { TURN_PAUSE_MS } from "@/game/constants";
 import { Perspective } from "@/game/names";
 
 import { Player } from "@/types/HexTile";
@@ -11,6 +11,7 @@ type ScoreboardProps = {
   currentPlayer: Player;
   turn: number;
   secondsLeft: number | null;
+  turnSeconds: number;
   perspective?: Perspective;
 };
 
@@ -20,6 +21,7 @@ export default function Scoreboard({
   currentPlayer,
   turn,
   secondsLeft,
+  turnSeconds,
   perspective,
 }: ScoreboardProps) {
   return (
@@ -32,7 +34,7 @@ export default function Scoreboard({
           perspective={perspective}
         />
         <TurnClock
-          durationSeconds={TURN_SECONDS}
+          durationSeconds={turnSeconds}
           delayMs={TURN_PAUSE_MS}
           secondsLeft={secondsLeft}
           resetKey={turn}

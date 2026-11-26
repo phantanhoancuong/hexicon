@@ -16,6 +16,7 @@ import {
 } from "@/components/tutorial/steps";
 import { Button, buttonClass } from "@/components/ui";
 
+import { TURN_SECONDS } from "@/game/constants";
 import { getGameResult } from "@/game/grid";
 import { coordToKey, getTile } from "@/game/hex";
 import { Perspective } from "@/game/names";
@@ -269,6 +270,7 @@ export default function Tutorial({ onShowRules }: TutorialProps) {
         wins={{ 1: 0, 2: 0 }}
         turn={Math.min(stepsBefore, STEP_COUNT - 1) + 1}
         secondsLeft={null}
+        turnSeconds={TURN_SECONDS}
         status="ready"
         events={[]}
         notice={coachText}

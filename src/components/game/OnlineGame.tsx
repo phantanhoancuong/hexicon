@@ -128,6 +128,7 @@ export default function OnlineGame({
         wins={wins}
         turn={turn}
         secondsLeft={secondsLeft}
+        turnSeconds={room.turnSeconds}
         status={status}
         events={events}
         perspective={perspective}

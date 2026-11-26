@@ -184,6 +184,7 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
         wins={wins}
         turn={turn}
         secondsLeft={secondsLeft}
+        turnSeconds={turnSeconds}
         status={status}
         events={events}
         perspective={perspective}

@@ -55,6 +55,6 @@ export const RULES: Rule[] = [
   },
   {
     title: "Time",
-    text: `You have ${TURN_SECONDS} seconds per turn. If time runs out, your turn is skipped. If both players are skipped in a row, or no word can be made from the letters on the grid, the letters are re-dealt again.`,
+    text: `You have ${TURN_SECONDS} seconds by default per turn. If time runs out, your turn is skipped. If both players are skipped in a row, or no word can be made from the letters on the grid, the letters are re-dealt again.`,
   },
 ];
