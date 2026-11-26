@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import Rules from "@/components/tutorial/Rules";
 import Tutorial from "@/components/tutorial/Tutorial";
 import { SegmentedControl } from "@/components/ui";
 
+import { useMarkHelpSeen } from "@/hooks/useMarkHelpSeen";
 import { useMounted } from "@/hooks/useMounted";
 
-import { useHelpSeen, useTutorialDone } from "@/lib/tutorialProgress";
+import { useTutorialDone } from "@/lib/tutorialProgress";
 
 type View = "tutorial" | "rules";
 
@@ -25,12 +26,9 @@ export default function HowToPlay() {
 
 function HowToPlayContent() {
   const [tutorialDone] = useTutorialDone();
-  const [, setHelpSeen] = useHelpSeen();
   const [view, setView] = useState<View>(tutorialDone ? "rules" : "tutorial");
 
-  useEffect(() => {
-    setHelpSeen(true);
-  }, [setHelpSeen]);
+  useMarkHelpSeen();
 
   return (
     <div className="flex h-full w-full max-w-xl flex-col items-center gap-2">

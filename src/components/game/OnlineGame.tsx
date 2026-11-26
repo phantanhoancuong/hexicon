@@ -9,14 +9,14 @@ import { Button } from "@/components/ui";
 import { getGameResult, isSelectable } from "@/game/grid";
 import { coordToKey, getTile } from "@/game/hex";
 import { Perspective } from "@/game/names";
+import { toggleKey } from "@/game/selection";
 
 import { useDeadlineCountdown } from "@/hooks/useDeadlineCountdown";
 import { useDictionary } from "@/hooks/useDictionary";
+import { useMarkHelpSeen } from "@/hooks/useMarkHelpSeen";
 import { useNoticeEvents } from "@/hooks/useNoticeEvents";
 import type { GameView, RoomView } from "@/hooks/useOnlineRoom";
 import { useSounds } from "@/hooks/useSounds";
-
-import { useHelpSeen } from "@/lib/tutorialProgress";
 
 import { HexCoord } from "@/types/HexTile";
 
@@ -60,7 +60,6 @@ export default function OnlineGame({
   const { status, isValidWord } = useDictionary();
   const secondsLeft = useDeadlineCountdown(turnEndsAt, room.turnSeconds);
   const play = useSounds();
-  const [, setHelpSeen] = useHelpSeen();
   const soundedTurn = useRef(turn);
 
   const playedEvent = events.find((event) => event.type === "played");
@@ -82,9 +81,7 @@ export default function OnlineGame({
     setEvents(state.events);
   }
 
-  useEffect(() => {
-    setHelpSeen(true);
-  }, [setHelpSeen]);
+  useMarkHelpSeen();
 
   useEffect(() => {
     if (soundedTurn.current === turn) return;
@@ -105,9 +102,7 @@ export default function OnlineGame({
 
     const key = coordToKey(coord);
     if (!selectedKeys.has(key)) play("select", selectedKeys.size);
-    const next = new Set(selectedKeys);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
+    const next = toggleKey(selectedKeys, key);
 
     setSelectedKeys(next);
     onSelectionChange([...next]);

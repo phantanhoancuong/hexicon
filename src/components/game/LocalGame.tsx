@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import GameBoard from "@/components/game/GameBoard";
 import GameOverDialog from "@/components/game/GameOverDialog";
@@ -15,10 +15,12 @@ import { applyMove, createGameState, dealState, nextGame } from "@/game/game";
 import { getGameResult, isSelectable } from "@/game/grid";
 import { coordToKey, getTile } from "@/game/hex";
 import { LOCAL, Perspective } from "@/game/names";
+import { toggleKey } from "@/game/selection";
 
 import { useBotTurn } from "@/hooks/useBotTurn";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useDictionary } from "@/hooks/useDictionary";
+import { useMarkHelpSeen } from "@/hooks/useMarkHelpSeen";
 import { useNoticeEvents } from "@/hooks/useNoticeEvents";
 import { useSounds } from "@/hooks/useSounds";
 
@@ -28,7 +30,6 @@ import {
   useFlip,
   useTurnSeconds,
 } from "@/lib/settings";
-import { useHelpSeen } from "@/lib/tutorialProgress";
 
 import { GameState, PassReason } from "@/types/GameState";
 import { HexCoord, Player } from "@/types/HexTile";
@@ -48,12 +49,10 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
   const [events, setEvents] = useNoticeEvents();
   const { status, dictionary, isValidWord } = useDictionary();
   const [flip] = useFlip();
-  const [alternate] = useAlternate(botPlayer === undefined ? "local" : "bot");
+  const mode = botPlayer === undefined ? "local" : "bot";
+  const [alternate] = useAlternate(mode);
   const [difficulty] = useDifficulty();
-  const [turnSeconds] = useTurnSeconds(
-    botPlayer === undefined ? "local" : "bot",
-  );
-  const [, setHelpSeen] = useHelpSeen();
+  const [turnSeconds] = useTurnSeconds(mode);
   const play = useSounds();
 
   const { grid, turn, currentPlayer, wins } = state;
@@ -65,9 +64,7 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
   const isFlipped =
     flip && botPlayer === undefined && currentPlayer === PLAYERS[1];
 
-  useEffect(() => {
-    setHelpSeen(true);
-  }, [setHelpSeen]);
+  useMarkHelpSeen();
 
   // Letters are dealt once the word list is ready.
   if (dictionary && dealtFor !== dictionary) {
@@ -102,12 +99,7 @@ export default function LocalGame({ botPlayer }: LocalGameProps) {
 
     const key = coordToKey(coord);
     if (!selectedKeys.has(key)) play("select", selectedKeys.size);
-    setSelectedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    setSelectedKeys((prev) => toggleKey(prev, key));
   };
 
   /** Plays the selected word. Does nothing if the move is refused. */
