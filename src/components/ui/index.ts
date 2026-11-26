@@ -1,6 +1,7 @@
 export { buttonClass } from "@/components/ui/Button";
 
 export { default as Button } from "@/components/ui/Button";
+export { default as Dialog } from "@/components/ui/Dialog";
 export { default as Icon } from "@/components/ui/Icon";
 export { default as SegmentedControl } from "@/components/ui/SegmentedControl";
 export { default as Slider } from "@/components/ui/Slider";
