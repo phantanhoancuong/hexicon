@@ -10,7 +10,7 @@ import type { Player } from "@/types/HexTile";
 import type { PlayerInfo } from "@/types/Online";
 
 import type { ConnectionState } from "@server/connection";
-import { isReady, send, tokenOf } from "@server/connection";
+import { isReady, send, tokenOf, unready } from "@server/connection";
 import {
   ALTERNATE_KEY,
   CLAIM_PATH,
@@ -192,10 +192,12 @@ export class Room extends Server<Env> {
       own = crypto.randomUUID();
       tokens.push(own);
       await this.ctx.storage.put(TOKENS_KEY, tokens);
-      if (firstPlayer && alternate !== undefined)
-        await this.ctx.storage.put(ALTERNATE_KEY, alternate);
-      if (firstPlayer && turnSeconds !== undefined)
-        await this.ctx.storage.put(TURN_SECONDS_KEY, turnSeconds);
+      if (firstPlayer) {
+        if (alternate !== undefined)
+          await this.ctx.storage.put(ALTERNATE_KEY, alternate);
+        if (turnSeconds !== undefined)
+          await this.ctx.storage.put(TURN_SECONDS_KEY, turnSeconds);
+      }
     }
 
     const roomWasEmpty = !Array.from(this.getConnections()).some(
@@ -239,11 +241,8 @@ export class Room extends Server<Env> {
    * @param side - The side to select, or `null` to unselect.
    */
   private async chooseSide(connection: Connection, side: Player | null) {
-    const own = tokenOf(connection);
-    if (own === null) {
-      send(connection, { type: "error", reason: "invalid-message" });
-      return;
-    }
+    const own = this.requireToken(connection);
+    if (own === null) return;
 
     if (!isReady(connection) && (await this.getGame()) === null) {
       const sides = await this.getSides();
@@ -264,11 +263,8 @@ export class Room extends Server<Env> {
    * @param ready - `true` to become ready, `false` to stop being ready.
    */
   private async setReady(connection: Connection, ready: boolean) {
-    const own = tokenOf(connection);
-    if (own === null) {
-      send(connection, { type: "error", reason: "invalid-message" });
-      return;
-    }
+    const own = this.requireToken(connection);
+    if (own === null) return;
 
     const game = await this.getGame();
     let started = false;
@@ -299,11 +295,7 @@ export class Room extends Server<Env> {
     if (!everyoneReady(await this.getTokens(), this.readyTokens()))
       return false;
 
-    for (const connection of this.getConnections()) {
-      const token = tokenOf(connection);
-      if (token !== null)
-        connection.setState({ token, ready: false } satisfies ConnectionState);
-    }
+    this.unreadyEveryone();
 
     await this.putGame(
       startGame(
@@ -322,30 +314,20 @@ export class Room extends Server<Env> {
    *
    * Changing the value is refused during a game or while the player is ready.
    *
-   * Changing the value successful will unready every other players in the room.
+   * Changing the value successful will unready every player in the room.
    *
    * @param connection - The connection that sent `set-alternate`.
    * @param alternate - `true` if the player who goes first alternates between matches.
    */
   private async setAlternate(connection: Connection, alternate: boolean) {
-    const own = tokenOf(connection);
-    if (own === null) {
-      send(connection, { type: "error", reason: "invalid-message" });
-      return;
-    }
+    if (this.requireToken(connection) === null) return;
 
-    const changes = alternate !== (await this.getAlternate());
-    if (changes && !isReady(connection) && !isRunning(await this.getGame())) {
-      await this.ctx.storage.put(ALTERNATE_KEY, alternate);
-
-      for (const other of this.getConnections()) {
-        const token = tokenOf(other);
-        if (token !== null)
-          other.setState({ token, ready: false } satisfies ConnectionState);
-      }
-    }
-
-    await this.broadcastRoom();
+    await this.changeRule(
+      connection,
+      ALTERNATE_KEY,
+      alternate,
+      await this.getAlternate(),
+    );
   }
 
   /**
@@ -362,24 +344,14 @@ export class Room extends Server<Env> {
     connection: Connection,
     turnSeconds: TurnSeconds,
   ) {
-    const own = tokenOf(connection);
-    if (own === null) {
-      send(connection, { type: "error", reason: "invalid-message" });
-      return;
-    }
+    if (this.requireToken(connection) === null) return;
 
-    const changes = turnSeconds !== (await this.getTurnSeconds());
-    if (changes && !isReady(connection) && !isRunning(await this.getGame())) {
-      await this.ctx.storage.put(TURN_SECONDS_KEY, turnSeconds);
-
-      for (const other of this.getConnections()) {
-        const token = tokenOf(other);
-        if (token !== null)
-          other.setState({ token, ready: false } satisfies ConnectionState);
-      }
-    }
-
-    await this.broadcastRoom();
+    await this.changeRule(
+      connection,
+      TURN_SECONDS_KEY,
+      turnSeconds,
+      await this.getTurnSeconds(),
+    );
   }
 
   /**
@@ -389,11 +361,8 @@ export class Room extends Server<Env> {
    * @param keys - The keys of the selected tiles, in word order.
    */
   private async submit(connection: Connection, keys: string[]) {
-    const own = tokenOf(connection);
-    if (own === null) {
-      send(connection, { type: "error", reason: "invalid-message" });
-      return;
-    }
+    const own = this.requireToken(connection);
+    if (own === null) return;
 
     const stored = await this.getGame();
     if (stored === null) {
@@ -425,11 +394,8 @@ export class Room extends Server<Env> {
    * @param keys - The keys of the selected tiles, in the order they were picked.
    */
   private async select(connection: Connection, keys: string[]) {
-    const own = tokenOf(connection);
-    if (own === null) {
-      send(connection, { type: "error", reason: "invalid-message" });
-      return;
-    }
+    const own = this.requireToken(connection);
+    if (own === null) return;
 
     const game = await this.getGame();
     if (game === null || !isTurnOf(game, await this.getSides(), own)) return;
@@ -450,11 +416,8 @@ export class Room extends Server<Env> {
    * @param connection - The connection that sent `leave`.
    */
   private async leave(connection: Connection) {
-    const own = tokenOf(connection);
-    if (own === null) {
-      send(connection, { type: "error", reason: "invalid-message" });
-      return;
-    }
+    const own = this.requireToken(connection);
+    if (own === null) return;
 
     const tokens = (await this.getTokens()).filter((token) => token !== own);
     await this.ctx.storage.put(TOKENS_KEY, tokens);
@@ -561,6 +524,54 @@ export class Room extends Server<Env> {
   private async armTurnTimer(game: StoredGame) {
     if (game.turnEndsAt === null) await this.ctx.storage.deleteAlarm();
     else await this.ctx.storage.setAlarm(game.turnEndsAt);
+  }
+
+  /**
+   * Reads the player's token from a connection.
+   *
+   * @param connection - Connection that sent the message.
+   * @returns The player's token, or `null` after sending an `invalid-message` error if the player has not joined.
+   */
+  private requireToken(connection: Connection): string | null {
+    const own = tokenOf(connection);
+    if (own === null)
+      send(connection, { type: "error", reason: "invalid-message" });
+    return own;
+  }
+
+  /**
+   * Changes a room's rule, then broadcasts back to the room.
+   *
+   * The change is not accepted during a game or while the player making the request is ready.
+   *
+   * A successful rule change makes every player not ready again.
+   *
+   * @param connection - The connection that requested the change.
+   * @param key - The storage key of the rule.
+   * @param next - The new value.
+   * @param current - The value the room has now.
+   */
+  private async changeRule<T extends boolean | number>(
+    connection: Connection,
+    key: string,
+    next: T,
+    current: T,
+  ) {
+    if (
+      next !== current &&
+      !isReady(connection) &&
+      !isRunning(await this.getGame())
+    ) {
+      await this.ctx.storage.put(key, next);
+      this.unreadyEveryone();
+    }
+
+    await this.broadcastRoom();
+  }
+
+  /** Makes every joined player not ready. */
+  private unreadyEveryone() {
+    for (const connection of this.getConnections()) unready(connection);
   }
 
   /** The players who are ready, by token. */

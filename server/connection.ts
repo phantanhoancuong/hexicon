@@ -25,3 +25,10 @@ export const isReady = (connection: Connection): boolean => {
   const state = connection.state as Partial<ConnectionState> | null;
   return state?.ready === true;
 };
+
+/** Sets the ready state of a player on a connection as not ready. */
+export const unready = (connection: Connection): void => {
+  const token = tokenOf(connection);
+  if (token !== null)
+    connection.setState({ token, ready: false } satisfies ConnectionState);
+};
