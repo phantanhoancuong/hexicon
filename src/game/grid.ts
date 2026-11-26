@@ -71,7 +71,7 @@ export const dealNeutral = (
  * @param dictionary - The dictionary to check against.
  * @returns `true` if some word can be spelt from the neutral tiles.
  */
-export const hasPlayableWord = (
+const hasPlayableWord = (
   grid: HexTileData[][],
   dictionary: Dictionary,
 ): boolean =>
@@ -272,7 +272,7 @@ const minDistance = (from: HexCoord, targets: HexTileData[]): number =>
  * @param player - The player who needs a capital.
  * @returns The chosen coordinate, or `null` if the player lost all of their tiles.
  */
-export const findCapitalSite = (
+const findCapitalSite = (
   grid: HexTileData[][],
   player: Player,
 ): HexCoord | null => {

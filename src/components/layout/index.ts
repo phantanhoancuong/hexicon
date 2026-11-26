@@ -5,4 +5,3 @@ export { default as DictionaryPreload } from "@/components/layout/DictionaryPrel
 export { default as HelpLink } from "@/components/layout/HelpLink";
 export { default as HomeTitle } from "@/components/layout/HomeTitle";
 export { default as SettingsButton } from "@/components/layout/SettingsButton";
-export { default as ThemeButton } from "@/components/layout/ThemeButton";

@@ -7,7 +7,7 @@ import { normalizeRoomCode } from "@/online/roomCode";
  * @returns The address without a trailing slash.
  * @throws If the variable is not set.
  */
-export const getServerUrl = (): string => {
+const getServerUrl = (): string => {
   const url = process.env.NEXT_PUBLIC_GAME_SERVER_URL;
   if (!url) throw new Error("NEXT_PUBLIC_GAME_SERVER_URL is not set.");
   return url.replace(/\/+$/, "");

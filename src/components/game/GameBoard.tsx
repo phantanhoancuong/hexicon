@@ -34,7 +34,6 @@ type GameBoardProps = {
   /** Notices to show in the status line. */
   events: GameEvent[];
   perspective?: Perspective;
-  botPlayer?: Player;
   /** If a word is in the dictionary. */
   isValidWord: (word: string) => boolean;
   played?: PlayedWord;

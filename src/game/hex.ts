@@ -32,7 +32,7 @@ export const keyToCoord = (key: string): HexCoord => {
  * @param coord - The coordinate.
  * @returns The index into `grid[coord.q]`.
  */
-export const coordToIndex = (coord: HexCoord): number =>
+const coordToIndex = (coord: HexCoord): number =>
   coord.r + Math.ceil(coord.q / 2);
 
 /**

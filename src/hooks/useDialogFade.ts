@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export const DIALOG_FADE_MS = 150;
+const DIALOG_FADE_MS = 150;
 
 export const useDialogFade = (
   onClose: () => void,

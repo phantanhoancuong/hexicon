@@ -7,14 +7,14 @@ import { HexCoord, HexTileData, Player } from "@/types/HexTile";
 export const TUTORIAL_PLAYER: Player = 1;
 
 /** A page to explain the board. */
-export type Info = {
+type Info = {
   text: string;
   focus?: (grid: HexTileData[][]) => HexCoord[];
   prepare?: (grid: HexTileData[][]) => HexTileData[][];
 };
 
 /** A tile for the player to select. */
-export type Tap = {
+type Tap = {
   at: HexCoord;
   text: string;
 };
@@ -61,7 +61,7 @@ const START_LAND: [q: number, r: number, player: Player][] = [
  *
  * The board has two capitals, each player has a little bit of land around their capital.
  */
-export const createScenario = (): HexTileData[][] => {
+const createScenario = (): HexTileData[][] => {
   const grid = initHexGrid().map((column) =>
     column.map((tile): HexTileData => ({
       ...tile,
@@ -320,10 +320,7 @@ const settle = (
   );
 
 /** Plays the taps of a move as the submitted word and returns the new grid. */
-export const playStep = (
-  grid: HexTileData[][],
-  step: Step,
-): HexTileData[][] => {
+const playStep = (grid: HexTileData[][], step: Step): HexTileData[][] => {
   const keys = new Set(step.taps.map((tap) => coordToKey(tap.at)));
   const capturableKeys = getCapturableKeys(grid, keys, TUTORIAL_PLAYER);
   const result = resolveSubmit(grid, keys, capturableKeys, TUTORIAL_PLAYER);
