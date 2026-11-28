@@ -3,8 +3,9 @@
 import { SegmentedControl } from "@/components/ui";
 
 import { TURN_SECONDS_OPTIONS } from "@/game/constants";
+import type { Mode } from "@/game/mode";
 
-import { TimedMode, useTurnSeconds } from "@/lib/settings";
+import { useTurnSeconds } from "@/lib/settings";
 
 const OPTIONS = TURN_SECONDS_OPTIONS.map((seconds) => ({
   value: seconds,
@@ -12,7 +13,7 @@ const OPTIONS = TURN_SECONDS_OPTIONS.map((seconds) => ({
 }));
 
 type TurnTimeSelectProps = {
-  mode: TimedMode;
+  mode: Mode;
 };
 
 export default function TurnTimeSelect({ mode }: TurnTimeSelectProps) {

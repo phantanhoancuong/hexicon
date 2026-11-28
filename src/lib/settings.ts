@@ -58,35 +58,36 @@ export const useVolume = createSetting(
 
 export const useColorBlind = createSetting("colorBlind", false, isBoolean);
 
-export type AlternateMode = Mode;
+/**
+ * Makes a setting that each mode saves separately, such as `local:alternate`, `bot:alternate` and `online:alternate`.
+ *
+ * Call this once at the top of a file and NOT in a component.
+ *
+ * @param name - The name of the setting, without the mode.
+ * @param defaultValue - The value used until the player changes it, and whenever nothing valid is saved.
+ * @param validate - If a value read from storage is acceptable.
+ * @returns A hook that takes a mode and returns that mode's value and a function to set it.
+ */
+const createSettingPerMode = <T>(
+  name: string,
+  defaultValue: T,
+  validate: (value: unknown) => value is T,
+) => {
+  const byMode = {
+    local: createLocalSetting(name, defaultValue, validate),
+    bot: createBotSetting(name, defaultValue, validate),
+    online: createOnlineSetting(name, defaultValue, validate),
+  } satisfies Record<Mode, unknown>;
 
-const alternateByMode = {
-  local: createLocalSetting("alternate", true, isBoolean),
-  bot: createBotSetting("alternate", true, isBoolean),
-  online: createOnlineSetting("alternate", true, isBoolean),
-} satisfies Record<AlternateMode, unknown>;
+  return (mode: Mode) => byMode[mode]();
+};
 
 /** If the first turn belongs to alternating players between matches. */
-export const useAlternate = (mode: AlternateMode) => alternateByMode[mode]();
+export const useAlternate = createSettingPerMode("alternate", true, isBoolean);
 
-export type TimedMode = Mode;
-
-const turnSecondsByMode = {
-  local: createLocalSetting<TurnSeconds>(
-    "turnSeconds",
-    TURN_SECONDS,
-    isTurnSeconds,
-  ),
-  bot: createBotSetting<TurnSeconds>(
-    "turnSeconds",
-    TURN_SECONDS,
-    isTurnSeconds,
-  ),
-  online: createOnlineSetting<TurnSeconds>(
-    "turnSeconds",
-    TURN_SECONDS,
-    isTurnSeconds,
-  ),
-} satisfies Record<TimedMode, unknown>;
-
-export const useTurnSeconds = (mode: TimedMode) => turnSecondsByMode[mode]();
+/** How long a turn lasts, in seconds. */
+export const useTurnSeconds = createSettingPerMode<TurnSeconds>(
+  "turnSeconds",
+  TURN_SECONDS,
+  isTurnSeconds,
+);
