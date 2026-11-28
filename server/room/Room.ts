@@ -200,12 +200,11 @@ export class Room extends Server<Env> {
       }
     }
 
-    const roomWasEmpty = !Array.from(this.getConnections()).some(
-      (other) => other.id !== connection.id && tokenOf(other) !== null,
-    );
+    const others = this.joined(connection);
+    const roomWasEmpty = others.length === 0;
 
-    for (const other of this.getConnections()) {
-      if (other.id !== connection.id && tokenOf(other) === own) {
+    for (const { connection: other, token: otherToken } of others) {
+      if (otherToken === own) {
         other.setState({ token: own, ready: false } satisfies ConnectionState);
         other.close(CLOSE_REPLACED, "replaced");
       }
@@ -401,10 +400,8 @@ export class Room extends Server<Env> {
     if (game === null || !isTurnOf(game, await this.getSides(), own)) return;
 
     const selection = selectableKeys(game, keys);
-    for (const other of this.getConnections()) {
-      const token = tokenOf(other);
-      if (token !== null && token !== own)
-        send(other, { type: "selection", keys: selection });
+    for (const { connection: other, token } of this.joined()) {
+      if (token !== own) send(other, { type: "selection", keys: selection });
     }
   }
 
@@ -442,16 +439,13 @@ export class Room extends Server<Env> {
     const inGame = (await this.getGame()) !== null;
     const alternate = await this.getAlternate();
     const turnSeconds = await this.getTurnSeconds();
-    const connected = new Set<string>();
-    const ready = new Set<string>();
-
-    for (const connection of this.getConnections()) {
-      if (connection.id === closing?.id) continue;
-      const token = tokenOf(connection);
-      if (token === null) continue;
-      connected.add(token);
-      if (isReady(connection)) ready.add(token);
-    }
+    const joined = this.joined(closing);
+    const connected = new Set(joined.map(({ token }) => token));
+    const ready = new Set(
+      joined
+        .filter(({ connection }) => isReady(connection))
+        .map(({ token }) => token),
+    );
 
     const infoOf = (token: string): PlayerInfo => ({
       connected: connected.has(token),
@@ -459,11 +453,7 @@ export class Room extends Server<Env> {
       ready: ready.has(token),
     });
 
-    for (const connection of this.getConnections()) {
-      if (connection.id === closing?.id) continue;
-      const own = tokenOf(connection);
-      if (own === null) continue;
-
+    for (const { connection, token: own } of joined) {
       const otherToken = tokens.find((token) => token !== own);
       const opponent = otherToken === undefined ? null : infoOf(otherToken);
 
@@ -484,10 +474,8 @@ export class Room extends Server<Env> {
     if (game === null) return;
 
     const sides = await this.getSides();
-    for (const connection of this.getConnections()) {
-      const token = tokenOf(connection);
-      if (token !== null) this.sendGame(connection, game, token, sides);
-    }
+    for (const { connection, token } of this.joined())
+      this.sendGame(connection, game, token, sides);
   }
 
   /**
@@ -574,14 +562,31 @@ export class Room extends Server<Env> {
     for (const connection of this.getConnections()) unready(connection);
   }
 
-  /** The players who are ready, by token. */
-  private readyTokens(): Set<string> {
-    const ready = new Set<string>();
+  /**
+   * The connections that have joined as a player.
+   *
+   * @param except - A connection to leave out (used for a connection that's closing).
+   * @returns Each joined connection the player's token.
+   */
+  private joined(
+    except?: Connection,
+  ): { connection: Connection; token: string }[] {
+    const players: { connection: Connection; token: string }[] = [];
     for (const connection of this.getConnections()) {
       const token = tokenOf(connection);
-      if (token !== null && isReady(connection)) ready.add(token);
+      if (token !== null && connection.id !== except?.id)
+        players.push({ connection, token });
     }
-    return ready;
+    return players;
+  }
+
+  /** The players who are ready. */
+  private readyTokens(): Set<string> {
+    return new Set(
+      this.joined()
+        .filter(({ connection }) => isReady(connection))
+        .map(({ token }) => token),
+    );
   }
 
   /** If the room was made by `POST /rooms`. */
