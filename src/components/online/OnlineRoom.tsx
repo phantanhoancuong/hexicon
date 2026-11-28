@@ -2,27 +2,24 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import OnlineGame from "@/components/game/OnlineGame";
 import RoomSetting from "@/components/online/RoomSetting";
 import Seats from "@/components/online/Seats";
 import { Button, buttonClass, SegmentedControl } from "@/components/ui";
 
-import {
-  TURN_SECONDS,
-  TURN_SECONDS_OPTIONS,
-  type TurnSeconds,
-} from "@/game/constants";
+import { TURN_SECONDS, TURN_SECONDS_OPTIONS } from "@/game/constants";
 import { playerName } from "@/game/names";
+
 import {
   useOnlineRoom,
   type ConnectionStatus,
   type OnlineError,
   type RoomView,
 } from "@/hooks/useOnlineRoom";
-import { useAlternate, useTurnSeconds } from "@/lib/settings";
+
 import { normalizeRoomCode } from "@/online/roomCode";
-import { useState } from "react";
 
 const TURN_TIME_OPTIONS = TURN_SECONDS_OPTIONS.map((seconds) => ({
   value: seconds,
@@ -107,8 +104,6 @@ export default function OnlineRoom({ code }: { code: string }) {
     leave,
   } = useOnlineRoom(normalized);
   const [copied, setCopied] = useState<boolean>(false);
-  const [, setOwnAlternate] = useAlternate("online");
-  const [, setOwnTurnSeconds] = useTurnSeconds("online");
 
   if (normalized === null)
     return <Problem message="You've entered an invalid room code." />;
@@ -122,16 +117,6 @@ export default function OnlineRoom({ code }: { code: string }) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), COPIED_MESSAGE_MS);
     } catch {}
-  };
-
-  const handleAlternate = (alternate: boolean): void => {
-    setOwnAlternate(alternate);
-    setAlternate(alternate);
-  };
-
-  const handleTurnSeconds = (value: TurnSeconds): void => {
-    setOwnTurnSeconds(value);
-    setTurnSeconds(value);
   };
 
   const handleLeave = (): void => {
@@ -208,7 +193,7 @@ export default function OnlineRoom({ code }: { code: string }) {
                 label="Alternate first turn"
                 checked={alternate}
                 disabled={self.ready}
-                onChange={handleAlternate}
+                onChange={setAlternate}
               />
               <SegmentedControl
                 inline
@@ -216,7 +201,7 @@ export default function OnlineRoom({ code }: { code: string }) {
                 options={TURN_TIME_OPTIONS}
                 value={turnSeconds}
                 disabled={self.ready}
-                onChange={handleTurnSeconds}
+                onChange={setTurnSeconds}
               />
             </section>
 

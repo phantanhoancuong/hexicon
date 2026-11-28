@@ -57,9 +57,9 @@ export const useOnlineRoom = (code: string | null) => {
   const [game, setGame] = useState<GameView | null>(null);
   const [opponentSelection, setOpponentSelection] = useState<string[]>([]);
   const [error, setError] = useState<OnlineError | null>(null);
-  const [alternate] = useAlternate("online");
+  const [alternate, setOwnAlternate] = useAlternate("online");
   const alternateRef = useRef(alternate);
-  const [turnSeconds] = useTurnSeconds("online");
+  const [turnSeconds, setOwnTurnSeconds] = useTurnSeconds("online");
   const turnSecondsRef = useRef(turnSeconds);
   const controlsRef = useRef<Controls | null>(null);
 
@@ -184,13 +184,24 @@ export const useOnlineRoom = (code: string | null) => {
     controlsRef.current?.send({ type: "set-ready", ready });
   }, []);
 
-  const setAlternate = useCallback((value: boolean) => {
-    controlsRef.current?.send({ type: "set-alternate", alternate: value });
-  }, []);
+  const setAlternate = useCallback(
+    (value: boolean) => {
+      setOwnAlternate(value);
+      controlsRef.current?.send({ type: "set-alternate", alternate: value });
+    },
+    [setOwnAlternate],
+  );
 
-  const setTurnSeconds = useCallback((value: TurnSeconds) => {
-    controlsRef.current?.send({ type: "set-turn-seconds", turnSeconds: value });
-  }, []);
+  const setTurnSeconds = useCallback(
+    (value: TurnSeconds) => {
+      setOwnTurnSeconds(value);
+      controlsRef.current?.send({
+        type: "set-turn-seconds",
+        turnSeconds: value,
+      });
+    },
+    [setOwnTurnSeconds],
+  );
 
   const submit = useCallback((keys: string[]) => {
     controlsRef.current?.send({ type: "submit", keys });
