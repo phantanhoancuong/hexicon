@@ -26,7 +26,6 @@ import {
   playMove,
   selectableKeys,
   startGame,
-  turnMsOf,
 } from "@server/room/turn";
 
 export type Env = { Main: DurableObjectNamespace<Room> };
@@ -213,7 +212,7 @@ export class Room extends Server<Env> {
 
     const current =
       roomWasEmpty && isRunning(game)
-        ? { ...game, turnEndsAt: Date.now() + turnMsOf(game) }
+        ? { ...game, turnEndsAt: Date.now() + game.turnMs }
         : game;
     if (current !== game) await this.putGame(current);
     else await this.armTurnTimer(current);
@@ -521,7 +520,7 @@ export class Room extends Server<Env> {
    *
    * @param connection - The connection that requested the change.
    * @param next - The new value.
-   * @param rule - The stored value.
+   * @param rule - The stored rule, which holds the value the room has now.
    */
   private async changeRule<T extends boolean | number>(
     connection: Connection,

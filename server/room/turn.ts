@@ -6,7 +6,6 @@ import { getTile, keyToCoord } from "@/game/hex";
 
 import type { GameState, Move } from "@/types/GameState";
 
-import { TURN_MS } from "@server/constants";
 import type { Sides } from "@server/room/lobby";
 
 /** The game of a room, as it is kept in storage. */
@@ -17,16 +16,8 @@ export type StoredGame = {
   turnEndsAt: number | null;
 
   /** How long each turn of this game lasts, in milliseconds. */
-  turnMs?: number;
+  turnMs: number;
 };
-
-/**
- * Gets how long each turn of a game lasts.
- *
- * @param game - The game.
- * @returns The turn length in milliseconds.
- */
-export const turnMsOf = (game: StoredGame): number => game.turnMs ?? TURN_MS;
 
 /** Wraps a state with the time its turn runs out, or with no time if the game is over. */
 const withTurnClock = (
@@ -107,7 +98,7 @@ export const playMove = (
   now: number,
 ): StoredGame | null => {
   const result = applyMove(game.state, move, dictionary);
-  return result.ok ? withTurnClock(result.state, now, turnMsOf(game)) : null;
+  return result.ok ? withTurnClock(result.state, now, game.turnMs) : null;
 };
 
 /**
