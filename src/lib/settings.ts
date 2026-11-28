@@ -2,6 +2,7 @@ import { createSetting } from "@/lib/createSetting";
 import { isBoolean } from "@/lib/guards";
 
 import {
+  DEFAULT_ALTERNATE,
   isTurnSeconds,
   TURN_SECONDS,
   type TurnSeconds,
@@ -58,36 +59,31 @@ export const useVolume = createSetting(
 
 export const useColorBlind = createSetting("colorBlind", false, isBoolean);
 
-/**
- * Makes a setting that each mode saves separately, such as `local:alternate`, `bot:alternate` and `online:alternate`.
- *
- * Call this once at the top of a file and NOT in a component.
- *
- * @param name - The name of the setting, without the mode.
- * @param defaultValue - The value used until the player changes it, and whenever nothing valid is saved.
- * @param validate - If a value read from storage is acceptable.
- * @returns A hook that takes a mode and returns that mode's value and a function to set it.
- */
-const createSettingPerMode = <T>(
-  name: string,
-  defaultValue: T,
-  validate: (value: unknown) => value is T,
-) => {
-  const byMode = {
-    local: createLocalSetting(name, defaultValue, validate),
-    bot: createBotSetting(name, defaultValue, validate),
-    online: createOnlineSetting(name, defaultValue, validate),
-  } satisfies Record<Mode, unknown>;
-
-  return (mode: Mode) => byMode[mode]();
-};
+const alternateByMode = {
+  local: createLocalSetting("alternate", DEFAULT_ALTERNATE, isBoolean),
+  bot: createBotSetting("alternate", DEFAULT_ALTERNATE, isBoolean),
+  online: createOnlineSetting("alternate", DEFAULT_ALTERNATE, isBoolean),
+} satisfies Record<Mode, unknown>;
 
 /** If the first turn belongs to alternating players between matches. */
-export const useAlternate = createSettingPerMode("alternate", true, isBoolean);
+export const useAlternate = (mode: Mode) => alternateByMode[mode]();
 
-/** How long a turn lasts, in seconds. */
-export const useTurnSeconds = createSettingPerMode<TurnSeconds>(
-  "turnSeconds",
-  TURN_SECONDS,
-  isTurnSeconds,
-);
+const turnSecondsByMode = {
+  local: createLocalSetting<TurnSeconds>(
+    "turnSeconds",
+    TURN_SECONDS,
+    isTurnSeconds,
+  ),
+  bot: createBotSetting<TurnSeconds>(
+    "turnSeconds",
+    TURN_SECONDS,
+    isTurnSeconds,
+  ),
+  online: createOnlineSetting<TurnSeconds>(
+    "turnSeconds",
+    TURN_SECONDS,
+    isTurnSeconds,
+  ),
+} satisfies Record<Mode, unknown>;
+
+export const useTurnSeconds = (mode: Mode) => turnSecondsByMode[mode]();

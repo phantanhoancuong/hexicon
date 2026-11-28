@@ -9,7 +9,11 @@ import RoomSetting from "@/components/online/RoomSetting";
 import Seats from "@/components/online/Seats";
 import { Button, buttonClass, SegmentedControl } from "@/components/ui";
 
-import { TURN_SECONDS, TURN_SECONDS_OPTIONS } from "@/game/constants";
+import {
+  DEFAULT_ALTERNATE,
+  TURN_SECONDS,
+  TURN_SECONDS_OPTIONS,
+} from "@/game/constants";
 import { playerName } from "@/game/names";
 
 import {
@@ -141,7 +145,7 @@ export default function OnlineRoom({ code }: { code: string }) {
   const { self, opponent, alternate, turnSeconds } = room ?? {
     self: null,
     opponent: null,
-    alternate: true,
+    alternate: DEFAULT_ALTERNATE,
     turnSeconds: TURN_SECONDS,
   };
   const canReady =

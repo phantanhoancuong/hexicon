@@ -1,7 +1,12 @@
 import type { Connection, WSMessage } from "partyserver";
 import { Server } from "partyserver";
 
-import type { TurnSeconds } from "@/game/constants";
+import {
+  DEFAULT_ALTERNATE,
+  TURN_SECONDS,
+  turnMsFor,
+  type TurnSeconds,
+} from "@/game/constants";
 
 import { CLOSE_REPLACED } from "@/online/closeCodes";
 import { parseClientMessage } from "@/online/parseClientMessage";
@@ -15,15 +20,12 @@ import {
   ALTERNATE_KEY,
   CLAIM_PATH,
   CREATED_KEY,
-  DEFAULT_ALTERNATE,
-  DEFAULT_TURN_SECONDS,
   EMPTY_ROOM_SECONDS,
   GAME_KEY,
   MAX_PLAYERS,
   SIDES_KEY,
   TOKENS_KEY,
   TURN_SECONDS_KEY,
-  turnMsFor,
 } from "@server/constants";
 import { getDictionary } from "@server/dictionary";
 import type { Sides } from "@server/room/lobby";
@@ -615,7 +617,7 @@ export class Room extends Server<Env> {
   private async getTurnSeconds(): Promise<TurnSeconds> {
     return (
       (await this.ctx.storage.get<TurnSeconds>(TURN_SECONDS_KEY)) ??
-      DEFAULT_TURN_SECONDS
+      TURN_SECONDS
     );
   }
 

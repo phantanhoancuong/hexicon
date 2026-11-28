@@ -1,10 +1,12 @@
 import { HexCoord, Player } from "@/types/HexTile";
 
+/** The players, in turn order. */
 export const PLAYERS = [1, 2] as const;
 
 /** Number of tiles in each column, from left to right. */
 export const COLUMN_HEIGHTS = [6, 7, 6, 7, 6, 7, 6];
 
+/** Where each player's capital is when a game starts. */
 export const CAPITAL_COORDS: Record<Player, HexCoord> = {
   1: { q: 1, r: 0 },
   2: { q: 5, r: 2 },
@@ -49,13 +51,15 @@ const LETTER_COUNTS: Record<string, number> = {
   Y: 2,
   Z: 1,
 };
-
 export const LETTER_POOL = Object.entries(LETTER_COUNTS)
   .map(([letter, count]) => letter.repeat(count))
   .join("");
 
 /** How long a player has for a turn. */
 export const TURN_SECONDS = 90;
+
+/** Default value for the setting whether the first player alternates between games. */
+export const DEFAULT_ALTERNATE = true;
 
 /** How long a notice stays on screen. */
 export const NOTICE_MS = 4000;
@@ -73,10 +77,27 @@ export const BOT_TILE_MS = 450;
 /** How long the bot pauses on its finished word before submitting it. */
 export const BOT_SUBMIT_MS = 2000;
 
-export const TURN_SECONDS_OPTIONS = [60, 90, 120] as const;
+/**
+ * Works out how long a turn lasts.
+ *
+ * Includes the pause at the start and the time a player has per turn.
+ *
+ * @param turnSeconds - How many seconds the player has for the turn.
+ * @returns The length of the turn, in milliseconds.
+ */
+export const turnMsFor = (turnSeconds: number): number =>
+  TURN_PAUSE_MS + turnSeconds * 1000;
 
+/** Turn time values a game accepts, in seconds. */
+export const TURN_SECONDS_OPTIONS = [60, 90, 120] as const;
 export type TurnSeconds = (typeof TURN_SECONDS_OPTIONS)[number];
 
+/**
+ * Checks if a value is one of the accepted turn time values.
+ *
+ * @param value - The value to check.
+ * @returns `true` if the value is a valid turn time.
+ */
 export const isTurnSeconds = (value: unknown): value is TurnSeconds =>
   typeof value === "number" &&
   TURN_SECONDS_OPTIONS.some((seconds) => seconds === value);
