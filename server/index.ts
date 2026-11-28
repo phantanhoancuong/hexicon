@@ -2,10 +2,10 @@ import { getServerByName, routePartykitRequest } from "partyserver";
 
 import { generateRoomCode } from "@/online/roomCode";
 
-import { CLAIM_PATH } from "./constants";
-import type { Env } from "./room/Room";
+import { CLAIM_PATH } from "@server/constants";
+import type { Env } from "@server/room/Room";
 
-export { Room } from "./room/Room";
+export { Room } from "@server/room/Room";
 
 /** How many codes to try when creating a room, in case a generated code is already taken. */
 const MAX_CREATE_ATTEMPTS = 5;

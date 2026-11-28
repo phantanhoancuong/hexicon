@@ -1,12 +1,7 @@
 import type { Connection, WSMessage } from "partyserver";
 import { Server } from "partyserver";
 
-import {
-  DEFAULT_ALTERNATE,
-  TURN_SECONDS,
-  turnMsFor,
-  type TurnSeconds,
-} from "@/game/constants";
+import { turnMsFor, type TurnSeconds } from "@/game/constants";
 
 import { CLOSE_REPLACED } from "@/online/closeCodes";
 import { parseClientMessage } from "@/online/parseClientMessage";
@@ -16,20 +11,12 @@ import type { PlayerInfo } from "@/types/Online";
 
 import type { ConnectionState } from "@server/connection";
 import { isReady, send, tokenOf, unready } from "@server/connection";
-import {
-  ALTERNATE_KEY,
-  CLAIM_PATH,
-  CREATED_KEY,
-  EMPTY_ROOM_SECONDS,
-  GAME_KEY,
-  MAX_PLAYERS,
-  SIDES_KEY,
-  TOKENS_KEY,
-  TURN_SECONDS_KEY,
-} from "@server/constants";
+import { CLAIM_PATH, EMPTY_ROOM_SECONDS, MAX_PLAYERS } from "@server/constants";
 import { getDictionary } from "@server/dictionary";
 import type { Sides } from "@server/room/lobby";
 import { canBeReady, everyoneReady } from "@server/room/lobby";
+import type { Entry } from "@server/room/storage";
+import { createRoomStorage } from "@server/room/storage";
 import type { StoredGame } from "@server/room/turn";
 import {
   expireTurn,
@@ -57,6 +44,9 @@ export class Room extends Server<Env> {
   /** Lets the room sleep while nobody sends anything. */
   static options = { hibernate: true };
 
+  /** The room's saved state. */
+  private readonly store = createRoomStorage(this.ctx.storage);
+
   /**
    * Handles plain requests to the room.
    *
@@ -68,10 +58,10 @@ export class Room extends Server<Env> {
     if (request.method !== "POST" || pathname !== CLAIM_PATH)
       return new Response("Not Found", { status: 404 });
 
-    if (await this.isCreated())
+    if (await this.store.created.get())
       return new Response("Room already exists", { status: 409 });
 
-    await this.ctx.storage.put(CREATED_KEY, true);
+    await this.store.created.set(true);
     await this.scheduleCleanup();
     return new Response("Created");
   }
@@ -125,7 +115,8 @@ export class Room extends Server<Env> {
     const othersOpen = Array.from(this.getConnections()).some(
       (other) => other.id !== connection.id,
     );
-    if (!othersOpen && (await this.isCreated())) await this.scheduleCleanup();
+    if (!othersOpen && (await this.store.created.get()))
+      await this.scheduleCleanup();
   }
 
   /**
@@ -135,11 +126,11 @@ export class Room extends Server<Env> {
    */
   async onAlarm() {
     if (Array.from(this.getConnections()).length === 0) {
-      await this.ctx.storage.deleteAll();
+      await this.store.clear();
       return;
     }
 
-    const game = await this.getGame();
+    const game = await this.store.game.get();
     if (game === null) return;
 
     const next = expireTurn(game, getDictionary(), Date.now());
@@ -177,12 +168,12 @@ export class Room extends Server<Env> {
       return;
     }
 
-    if (!(await this.isCreated())) {
+    if (!(await this.store.created.get())) {
       send(connection, { type: "error", reason: "room-not-found" });
       return;
     }
 
-    const tokens = await this.getTokens();
+    const tokens = await this.store.tokens.get();
     let own = token !== null && tokens.includes(token) ? token : null;
 
     if (own === null) {
@@ -193,12 +184,11 @@ export class Room extends Server<Env> {
       const firstPlayer = tokens.length === 0;
       own = crypto.randomUUID();
       tokens.push(own);
-      await this.ctx.storage.put(TOKENS_KEY, tokens);
+      await this.store.tokens.set(tokens);
       if (firstPlayer) {
-        if (alternate !== undefined)
-          await this.ctx.storage.put(ALTERNATE_KEY, alternate);
+        if (alternate !== undefined) await this.store.alternate.set(alternate);
         if (turnSeconds !== undefined)
-          await this.ctx.storage.put(TURN_SECONDS_KEY, turnSeconds);
+          await this.store.turnSeconds.set(turnSeconds);
       }
     }
 
@@ -218,7 +208,7 @@ export class Room extends Server<Env> {
     send(connection, { type: "welcome", token: own });
     await this.broadcastRoom();
 
-    const game = await this.getGame();
+    const game = await this.store.game.get();
     if (game === null) return;
 
     const current =
@@ -228,7 +218,7 @@ export class Room extends Server<Env> {
     if (current !== game) await this.putGame(current);
     else await this.armTurnTimer(current);
 
-    this.sendGame(connection, current, own, await this.getSides());
+    this.sendGame(connection, current, own, await this.store.sides.get());
   }
 
   /**
@@ -245,11 +235,11 @@ export class Room extends Server<Env> {
     const own = this.requireToken(connection);
     if (own === null) return;
 
-    if (!isReady(connection) && (await this.getGame()) === null) {
-      const sides = await this.getSides();
+    if (!isReady(connection) && (await this.store.game.get()) === null) {
+      const sides = await this.store.sides.get();
       if (side === null) delete sides[own];
       else sides[own] = side;
-      await this.ctx.storage.put(SIDES_KEY, sides);
+      await this.store.sides.set(sides);
     }
 
     await this.broadcastRoom();
@@ -267,11 +257,11 @@ export class Room extends Server<Env> {
     const own = this.requireToken(connection);
     if (own === null) return;
 
-    const game = await this.getGame();
+    const game = await this.store.game.get();
     let started = false;
 
     if (!isRunning(game)) {
-      const sides = await this.getSides();
+      const sides = await this.store.sides.get();
       if (!ready || canBeReady(own, sides, this.readyTokens()))
         connection.setState({ token: own, ready } satisfies ConnectionState);
 
@@ -293,7 +283,7 @@ export class Room extends Server<Env> {
   private async startGameIfReady(
     previous: StoredGame | null,
   ): Promise<boolean> {
-    if (!everyoneReady(await this.getTokens(), this.readyTokens()))
+    if (!everyoneReady(await this.store.tokens.get(), this.readyTokens()))
       return false;
 
     this.unreadyEveryone();
@@ -302,8 +292,8 @@ export class Room extends Server<Env> {
       startGame(
         previous,
         getDictionary(),
-        await this.getAlternate(),
-        turnMsFor(await this.getTurnSeconds()),
+        await this.store.alternate.get(),
+        turnMsFor(await this.store.turnSeconds.get()),
         Date.now(),
       ),
     );
@@ -323,12 +313,7 @@ export class Room extends Server<Env> {
   private async setAlternate(connection: Connection, alternate: boolean) {
     if (this.requireToken(connection) === null) return;
 
-    await this.changeRule(
-      connection,
-      ALTERNATE_KEY,
-      alternate,
-      await this.getAlternate(),
-    );
+    await this.changeRule(connection, alternate, this.store.alternate);
   }
 
   /**
@@ -347,12 +332,7 @@ export class Room extends Server<Env> {
   ) {
     if (this.requireToken(connection) === null) return;
 
-    await this.changeRule(
-      connection,
-      TURN_SECONDS_KEY,
-      turnSeconds,
-      await this.getTurnSeconds(),
-    );
+    await this.changeRule(connection, turnSeconds, this.store.turnSeconds);
   }
 
   /**
@@ -365,14 +345,14 @@ export class Room extends Server<Env> {
     const own = this.requireToken(connection);
     if (own === null) return;
 
-    const stored = await this.getGame();
+    const stored = await this.store.game.get();
     if (stored === null) {
       await this.broadcastRoom();
       return;
     }
 
     const dictionary = getDictionary();
-    const sides = await this.getSides();
+    const sides = await this.store.sides.get();
 
     const game = expireTurn(stored, dictionary, Date.now());
     const next = isTurnOf(game, sides, own)
@@ -398,8 +378,9 @@ export class Room extends Server<Env> {
     const own = this.requireToken(connection);
     if (own === null) return;
 
-    const game = await this.getGame();
-    if (game === null || !isTurnOf(game, await this.getSides(), own)) return;
+    const game = await this.store.game.get();
+    if (game === null || !isTurnOf(game, await this.store.sides.get(), own))
+      return;
 
     const selection = selectableKeys(game, keys);
     for (const { connection: other, token } of this.joined()) {
@@ -418,13 +399,15 @@ export class Room extends Server<Env> {
     const own = this.requireToken(connection);
     if (own === null) return;
 
-    const tokens = (await this.getTokens()).filter((token) => token !== own);
-    await this.ctx.storage.put(TOKENS_KEY, tokens);
+    const tokens = (await this.store.tokens.get()).filter(
+      (token) => token !== own,
+    );
+    await this.store.tokens.set(tokens);
 
-    const sides = await this.getSides();
+    const sides = await this.store.sides.get();
     delete sides[own];
-    await this.ctx.storage.put(SIDES_KEY, sides);
-    await this.ctx.storage.delete(GAME_KEY);
+    await this.store.sides.set(sides);
+    await this.store.game.remove();
 
     connection.setState(null);
     await this.broadcastRoom();
@@ -436,11 +419,11 @@ export class Room extends Server<Env> {
    * @param closing - A connection that is closing. It is not counted as connected and doesn't get notified of the room state.
    */
   private async broadcastRoom(closing?: Connection) {
-    const tokens = await this.getTokens();
-    const sides = await this.getSides();
-    const inGame = (await this.getGame()) !== null;
-    const alternate = await this.getAlternate();
-    const turnSeconds = await this.getTurnSeconds();
+    const tokens = await this.store.tokens.get();
+    const sides = await this.store.sides.get();
+    const inGame = (await this.store.game.get()) !== null;
+    const alternate = await this.store.alternate.get();
+    const turnSeconds = await this.store.turnSeconds.get();
     const joined = this.joined(closing);
     const connected = new Set(joined.map(({ token }) => token));
     const ready = new Set(
@@ -472,10 +455,10 @@ export class Room extends Server<Env> {
 
   /** Sends every joined player the current game. */
   private async broadcastGame() {
-    const game = await this.getGame();
+    const game = await this.store.game.get();
     if (game === null) return;
 
-    const sides = await this.getSides();
+    const sides = await this.store.sides.get();
     for (const { connection, token } of this.joined())
       this.sendGame(connection, game, token, sides);
   }
@@ -537,22 +520,20 @@ export class Room extends Server<Env> {
    * A successful rule change makes every player not ready again.
    *
    * @param connection - The connection that requested the change.
-   * @param key - The storage key of the rule.
    * @param next - The new value.
-   * @param current - The value the room has now.
+   * @param rule - The stored value.
    */
   private async changeRule<T extends boolean | number>(
     connection: Connection,
-    key: string,
     next: T,
-    current: T,
+    rule: Entry<T>,
   ) {
     if (
-      next !== current &&
+      next !== (await rule.get()) &&
       !isReady(connection) &&
-      !isRunning(await this.getGame())
+      !isRunning(await this.store.game.get())
     ) {
-      await this.ctx.storage.put(key, next);
+      await rule.set(next);
       this.unreadyEveryone();
     }
 
@@ -568,7 +549,7 @@ export class Room extends Server<Env> {
    * The connections that have joined as a player.
    *
    * @param except - A connection to leave out (used for a connection that's closing).
-   * @returns Each joined connection the player's token.
+   * @returns Each joined connection and the player's token.
    */
   private joined(
     except?: Connection,
@@ -591,44 +572,9 @@ export class Room extends Server<Env> {
     );
   }
 
-  /** If the room was made by `POST /rooms`. */
-  private async isCreated(): Promise<boolean> {
-    return (await this.ctx.storage.get<boolean>(CREATED_KEY)) === true;
-  }
-
-  /** The tokens of the players in the room, in the order they joined. */
-  private async getTokens(): Promise<string[]> {
-    return (await this.ctx.storage.get<string[]>(TOKENS_KEY)) ?? [];
-  }
-
-  /** The side each player has taken, by token. */
-  private async getSides(): Promise<Sides> {
-    return (await this.ctx.storage.get<Sides>(SIDES_KEY)) ?? {};
-  }
-
-  /** If the player who goes first alternates between matches. */
-  private async getAlternate(): Promise<boolean> {
-    return (
-      (await this.ctx.storage.get<boolean>(ALTERNATE_KEY)) ?? DEFAULT_ALTERNATE
-    );
-  }
-
-  /** How long a turn lasts, in seconds. */
-  private async getTurnSeconds(): Promise<TurnSeconds> {
-    return (
-      (await this.ctx.storage.get<TurnSeconds>(TURN_SECONDS_KEY)) ??
-      TURN_SECONDS
-    );
-  }
-
-  /** The game being played in the room, or `null` if there is none. */
-  private async getGame(): Promise<StoredGame | null> {
-    return (await this.ctx.storage.get<StoredGame>(GAME_KEY)) ?? null;
-  }
-
   /** Keeps the game, and sets the alarm for its turn timer. */
   private async putGame(game: StoredGame) {
-    await this.ctx.storage.put(GAME_KEY, game);
+    await this.store.game.set(game);
     await this.armTurnTimer(game);
   }
 }
